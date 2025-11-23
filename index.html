@@ -1,0 +1,1431 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>ShoppingThings — Smart Home IoT Checklist</title>
+  
+  <!-- Libraries -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+  
+  <!-- Tailwind Config -->
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: { DEFAULT: '#008DF7', dark: '#006BEA', light: '#68AEFF' },
+            surface: { DEFAULT: 'rgba(255,255,255,0.64)', strong: 'rgba(255,255,255,0.98)' }
+          },
+          fontFamily: {
+            sans: ['"Noto Sans KR"', 'sans-serif'],
+            display: ['"Noto Sans KR"', 'sans-serif'],
+          },
+          keyframes: {
+            marquee: {
+              '0%': { transform: 'translateX(0)' },
+              '10%': { transform: 'translateX(0)' },
+              '45%': { transform: 'translateX(calc(-100% + 100px))' },
+              '55%': { transform: 'translateX(calc(-100% + 100px))' },
+              '100%': { transform: 'translateX(0)' },
+            },
+            slideUp: {
+              '0%': { transform: 'translateY(100%)', opacity: '0' },
+              '100%': { transform: 'translateY(0)', opacity: '1' }
+            },
+            slideDown: {
+              '0%': { transform: 'translateY(-20px)', opacity: '0' },
+              '100%': { transform: 'translateY(0)', opacity: '1' }
+            },
+            fadeIn: {
+              '0%': { opacity: '0' },
+              '100%': { opacity: '1' }
+            }
+          },
+          animation: {
+            marquee: 'marquee 8s linear infinite',
+            slideUp: 'slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+            slideDown: 'slideDown 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+            fadeIn: 'fadeIn 0.2s ease-out',
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Custom Styles -->
+  <style>
+    /* Hide scrollbars */
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+    /* Glassmorphism */
+    .glass {
+      background: rgba(255, 255, 255, 0.65);
+      backdrop-filter: blur(14px) saturate(120%);
+      border: 1px solid rgba(255, 255, 255, 0.5);
+    }
+    .dark .glass {
+      background: rgba(15, 23, 42, 0.65);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    /* Hide Number Input Spinners */
+    input[type=number]::-webkit-inner-spin-button, 
+    input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+    input[type=number] { -moz-appearance: textfield; }
+
+    /* Print Hiding */
+    .no-print { display: none !important; }
+
+    /* Dark Mode Ambient Light Gradient */
+    body.dark {
+      background-image: radial-gradient(ellipse at top, #002f53 0%, #0f172a 50%, #020617 100%);
+    }
+
+    /* Mask for tabs */
+    .mask-linear-sides {
+      mask-image: linear-gradient(to right, transparent, black 20px, black calc(100% - 20px), transparent);
+      -webkit-mask-image: linear-gradient(to right, transparent, black 20px, black calc(100% - 20px), transparent);
+    }
+
+    /* Notification Stack Styles */
+    #notif-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.2);
+      backdrop-filter: blur(2px);
+      z-index: 90;
+      display: none;
+    }
+    #notif-backdrop.active { display: block; }
+
+    .notif-stack {
+      position: fixed;
+      top: 72px; /* Below GNB */
+      right: 16px; /* Align with GNB content approx */
+      z-index: 100;
+      width: 340px;
+      max-width: calc(100vw - 32px);
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      transform-origin: top right;
+      transition: all 0.2s ease-out;
+      opacity: 0;
+      pointer-events: none;
+      transform: scale(0.95);
+    }
+    .notif-stack.open {
+      opacity: 1;
+      pointer-events: auto;
+      transform: scale(1);
+    }
+    
+    .stack-card {
+      background: rgba(255, 255, 255, 0.98);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(0,0,0,0.08);
+      box-shadow: 0 10px 40px -10px rgba(0,0,0,0.15);
+      border-radius: 16px;
+      width: 100%;
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .dark .stack-card {
+      background: rgba(30, 41, 59, 0.98);
+      border: 1px solid rgba(255,255,255,0.1);
+      color: white;
+    }
+
+    .notif-stack.folded .stack-preview {
+      position: absolute;
+      bottom: -6px;
+      left: 10px;
+      right: 10px;
+      height: 10px;
+      background: white;
+      opacity: 0.5;
+      border-radius: 0 0 12px 12px;
+      z-index: -1;
+      transform: scale(0.95);
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    .dark .notif-stack.folded .stack-preview { background: #334155; }
+    
+    .notif-stack.folded .stack-preview:nth-child(2) {
+      bottom: -12px;
+      transform: scale(0.9);
+      opacity: 0.3;
+      z-index: -2;
+    }
+
+    /* Bell Button specific */
+    .nudge-dot {
+      position: absolute;
+      top: 6px;
+      right: 6px;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background-color: #EF4444;
+      border: 1px solid white;
+      display: none;
+    }
+    .dark .nudge-dot { border-color: #0f172a; }
+    
+    button[aria-pressed="true"] {
+      color: #008DF7;
+      background-color: rgba(0, 141, 247, 0.1);
+    }
+
+    .severity-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 8px; }
+    .severity-dot.critical { background-color: #EF4444; box-shadow: 0 0 8px rgba(239,68,68,0.5); }
+    .severity-dot.major { background-color: #F97316; }
+    .severity-dot.minor { background-color: #EAB308; }
+    .severity-dot.info { background-color: #3B82F6; }
+    .severity-dot.success { background-color: #22c55e; }
+  </style>
+</head>
+<body class="text-slate-900 dark:text-slate-100 antialiased overflow-x-hidden transition-colors duration-500 bg-gradient-to-br from-slate-50 via-white to-blue-50 dark:from-slate-950 dark:via-slate-900 dark:to-[#0B1121]">
+  
+  <!-- GNB -->
+  <header id="gnb" class="fixed top-0 left-0 right-0 bg-white/80 dark:bg-slate-900/80 glass border-b border-slate-200/50 dark:border-slate-800 z-50 no-print-target backdrop-blur-md flex flex-col">
+    <!-- Row 1 -->
+    <div class="flex items-center justify-between px-4 h-16 w-full max-w-7xl mx-auto">
+      <div class="flex items-center gap-3">
+        <button id="btn-sidebar-toggle" class="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg hidden md:flex text-slate-500 dark:text-slate-400 transition-colors"></button>
+        <div class="w-10 h-10 rounded-xl bg-white dark:bg-slate-800 flex items-center justify-center shadow-sm overflow-hidden">
+          <img src="images/icons/general/logo.png" alt="ST" class="w-full h-full object-cover" onerror="this.style.display='none';this.parentElement.innerText='ST'">
+        </div>
+        <h1 class="font-extrabold text-lg tracking-tight text-slate-900 dark:text-white">ShoppingThings</h1>
+      </div>
+
+      <!-- PC Tabs -->
+      <div class="hidden md:flex items-center gap-4 overflow-hidden flex-1 px-8 justify-start">
+        <div id="pc-tabs-container" class="flex items-center gap-2 overflow-x-auto no-scrollbar mask-linear-sides w-full cursor-grab active:cursor-grabbing select-none"></div>
+      </div>
+
+      <!-- Actions -->
+      <div class="flex items-center gap-2 shrink-0">
+        <button id="btn-export-pc" class="hidden md:flex btn-primary bg-gradient-to-r from-brand-light to-brand text-white px-4 py-2 rounded-full text-sm font-bold items-center gap-2 shadow-lg shadow-brand/20 hover:shadow-brand/30 transition-all active:scale-95">PNG 저장</button>
+        <div class="flex items-center">
+          <button id="btn-gnb-notif" class="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full text-slate-500 dark:text-slate-400 transition-colors relative" aria-label="알림" aria-pressed="false">
+             <span class="nudge-dot"></span>
+          </button>
+          <div class="relative">
+            <button id="btn-gnb-more" class="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full text-slate-500 dark:text-slate-400 transition-colors"></button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Row 2: Mobile Tabs -->
+    <div class="md:hidden border-t border-slate-100 dark:border-slate-800 px-2 py-2 bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm">
+      <div id="mobile-tabs-container" class="flex items-center gap-2 overflow-x-auto no-scrollbar w-full cursor-grab active:cursor-grabbing select-none"></div>
+    </div>
+  </header>
+
+  <!-- Layout -->
+  <div class="pt-36 md:pt-20 flex max-w-7xl mx-auto px-4 gap-6">
+    <!-- Sidebar -->
+    <aside id="sidebar" class="fixed left-4 top-24 bottom-4 bg-transparent transition-all duration-300 z-30 hidden md:flex flex-col gap-2 no-print-target w-48">
+      <nav class="flex flex-col gap-1 w-full">
+        <button id="nav-device" class="flex items-center gap-3 rounded-xl border shadow-sm transition-all text-left px-4 py-3 bg-white/50 dark:bg-slate-800/50 hover:bg-white dark:hover:bg-slate-800 text-brand border-slate-100 dark:border-slate-700 font-bold">
+          <span>기기 목록</span>
+        </button>
+        <button id="nav-help" class="flex items-center gap-3 rounded-xl border border-transparent transition-all text-left px-4 py-3 hover:bg-white/50 dark:hover:bg-slate-800/50 text-slate-500 dark:text-slate-400 hover:border-slate-100 dark:hover:border-slate-700 font-bold">
+          <span>도움말</span>
+        </button>
+      </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main id="main-content" class="flex-1 transition-all duration-300 min-w-0 md:ml-52">
+      <!-- Progressive Automation Score Widget (Scrollable) -->
+      <div id="pas-wrapper" class="w-full mb-8 cursor-pointer select-none group" title="클릭하여 상세 분석 보기">
+        <div class="flex items-end justify-between mb-2 px-1">
+          <div class="flex flex-col">
+            <div class="flex items-baseline gap-2">
+              <span class="text-sm font-extrabold text-slate-500 dark:text-slate-400 uppercase tracking-widest">Automation Score</span>
+            </div>
+            <div class="flex items-baseline gap-1 mt-1">
+              <span id="pas-val" class="text-4xl font-black text-slate-800 dark:text-white leading-none tracking-tight">0</span>
+              <span class="text-lg font-bold text-slate-400">/ 100</span>
+            </div>
+          </div>
+          <div class="flex flex-col items-end">
+             <div id="pas-status-text" class="text-3xl font-black text-slate-300 dark:text-slate-600 mb-1">분석 중</div>
+             <div id="pas-desc" class="text-xs font-bold text-slate-400 text-right">잠시만 기다려주세요</div>
+          </div>
+        </div>
+        
+        <div class="relative w-full h-10 bg-slate-200 dark:bg-slate-700 rounded-xl overflow-hidden shadow-inner border border-slate-200 dark:border-slate-600">
+           <!-- Ticks for levels -->
+           <div class="absolute left-[33%] top-0 bottom-0 w-[2px] bg-white dark:bg-slate-800 z-10 opacity-30"></div>
+           <div class="absolute left-[66%] top-0 bottom-0 w-[2px] bg-white dark:bg-slate-800 z-10 opacity-30"></div>
+           
+           <!-- Fill -->
+           <div id="pas-fill" class="h-full bg-brand transition-all duration-1000 ease-out relative w-0 flex items-center justify-end px-3">
+              <!-- Shine effect -->
+              <div class="absolute inset-0 bg-gradient-to-b from-white/20 to-transparent"></div>
+           </div>
+        </div>
+      </div>
+
+      <div id="widgets-area" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 w-full mb-6"></div>
+      <div id="rooms-area" class="flex flex-col gap-6 pb-20"></div>
+    </main>
+
+    <!-- Right Indicator -->
+    <div id="indicator-area" class="fixed right-2 xl:right-4 top-1/2 -translate-y-1/2 flex flex-col gap-3 z-40 no-print-target pointer-events-none"></div>
+  </div>
+
+  <!-- Notification Backdrop -->
+  <div id="notif-backdrop"></div>
+
+  <!-- Notification Stack -->
+  <div id="notif-stack" class="notif-stack no-print-target">
+    <!-- Injected by JS -->
+  </div>
+
+  <!-- Mobile FAB -->
+  <button id="btn-export-mobile" class="md:hidden fixed right-4 bottom-28 z-50 bg-gradient-to-r from-brand-light to-brand text-white pl-4 pr-6 py-3 rounded-full shadow-2xl shadow-brand/40 flex items-center gap-2 active:scale-95 transition-transform no-print-target">
+    <span class="font-bold text-sm">PNG 저장</span>
+  </button>
+
+  <!-- Mobile Bottom Nav -->
+  <nav class="md:hidden fixed bottom-4 left-4 right-4 bg-white/80 dark:bg-slate-900/80 glass border border-white/50 dark:border-slate-700 shadow-2xl rounded-2xl p-2 flex justify-around z-40 no-print-target">
+    <button id="mobile-nav-device" class="flex flex-col items-center gap-1 p-2 text-brand">
+      <span class="text-[10px] font-bold">기기</span>
+    </button>
+    <button id="mobile-nav-help" class="flex flex-col items-center gap-1 p-2 text-slate-400 dark:text-slate-500 active:text-brand">
+      <span class="text-[10px] font-bold">도움말</span>
+    </button>
+  </nav>
+
+  <!-- Portals -->
+  <div id="modal-root"></div>
+  <div id="popover-root"></div>
+  <div id="autocomplete-root"></div>
+
+  <!-- Main Script -->
+  <script>
+    // --- DATA CONSTANTS ---
+    const STORAGE_KEY = 'shoppingthings:rooms:v9';
+    const DEVICE_CATEGORIES = ['생활 가전', '에어케어 가전', '주방 가전', 'TV/엔터테인먼트', '조명/스위치', '에너지', '센서/보안', '허브/연결', '웨어러블', '피트니스/헬스', '라이프스타일/기타'];
+    const DEVICE_PROFILE = {
+      '생활 가전': ['건조기', '로봇청소기', '미세플라스틱 필터', '세탁기', '슈드레서', '스틱 청소기', '에어드레서'],
+      '에어케어 가전': ['가습기', '공기청정기', '송풍/환기', '에어컨', '제습기'],
+      '주방 가전': ['냉장고', '레인지', '식기세척기', '오븐', '전기밥솥', '전자레인지', '정수기', '쿡탑', '후드'],
+      'TV/엔터테인먼트': ['AV 리시버', 'TV', '디스플레이', '모니터', '사운드바', '스피커', '음악 시스템', '프로젝터'],
+      '조명/스위치': ['스위치/조광기', '조명', '천장 조명'],
+      '에너지': ['보일러', '스마트 플러그', '에너지 모니터링'],
+      '센서/보안': ['경보기', '공기질 센서', '누수감지센서', '다목적 센서 (문열림 센서)', '도어록', '동작감지센서', '방범창', '비전 센서', '연기 감지기', '열림/닫힘 센서', '온도/습도 센서', '재실 감지 센서', '조도 센서', '초인종', '카메라', '태그/트래커'],
+      '허브/연결': ['리피터/확장기', '브릿지', '스마트 홈 어댑터(동글)', '스마트 홈 허브'],
+      '웨어러블': ['Buds', '링', '워치'],
+      '피트니스/헬스': ['베개', '체온계', '체중계', '피트니스 매트', '혈당측정기', '혈압계'],
+      '라이프스타일/기타': ['금고', '리모컨/버튼', '무선 충전기', '반려동물 급식기', '밸브', '비데', '스프링클러', '온열매트', '자동차', '전기차 충전기', '차고 문', '창문 개폐기', '커튼/블라인드', '홈 로봇', '기타']
+    };
+    
+    // Capability Map for Logic Engine
+    const CAPABILITY_MAP = {
+      '스마트 홈 허브': ['hub', 'hub_zigbee', 'hub_thread', 'hub_zwave'],
+      '스마트 홈 어댑터(동글)': ['hub', 'hub_zigbee'],
+      '브릿지': ['hub'],
+      '스마트 스피커': ['hub_wifi', 'audio_out'],
+      '사운드바': ['audio_out'],
+      '전구': ['light'], '조명': ['light'], '천장 조명': ['light'],
+      '스위치/조광기': ['switch'],
+      '동작감지센서': ['sensor_motion'],
+      '재실 감지 센서': ['sensor_presence'],
+      '다목적 센서 (문열림 센서)': ['sensor_contact'], '열림/닫힘 센서': ['sensor_contact'],
+      '공기질 센서': ['sensor_air'], '온도/습도 센서': ['sensor_temp'],
+      '에어컨': ['hvac'], '송풍/환기': ['ventilation'], '제습기': ['hvac'], '가습기': ['hvac'],
+      '쿡탑': ['cooktop'], '레인지': ['cooktop'],
+      '후드': ['hood'],
+      '도어록': ['doorlock'],
+      '카메라': ['camera'], '초인종': ['camera'],
+      '스마트 플러그': ['smart_plug'], '에너지 모니터링': ['energy_monitor'],
+      '로봇청소기': ['robot_cleaner']
+    };
+
+    const DEVICE_ICON_MAP = {
+      '건조기': 'dryer', '로봇청소기': 'robot_vacuum', '미세플라스틱 필터': 'microplastic_filter', '세탁기': 'washing_machine', '슈드레서': 'shoedresser', '스틱 청소기': 'stick_vacuum_cleaner', '에어드레서': 'airdresser',
+      '가습기': 'humidifier', '공기청정기': 'air_purifier', '송풍/환기': 'vent', '에어컨': 'aircon', '제습기': 'dehumidifier',
+      '냉장고': 'refrigerator', '레인지': 'range', '식기세척기': 'dishwasher', '오븐': 'oven', '전기밥솥': 'rice_cooker', '전자레인지': 'microwave', '정수기': 'water_purifier', '쿡탑': 'cooktop', '후드': 'hood',
+      'AV 리시버': 'av_receiver', 'TV': 'tv', '디스플레이': 'display', '모니터': 'monitor', '사운드바': 'soundbar', '스피커': 'speaker', '음악 시스템': 'music_system', '프로젝터': 'projector',
+      '스위치/조광기': 'switch_dimmer', '조명': 'lighting', '천장 조명': 'ceiling_light',
+      '보일러': 'boiler', '스마트 플러그': 'smart_plug', '에너지 모니터링': 'energy_monitoring',
+      '경보기': 'alarm', '공기질 센서': 'air_quality_sensor', '누수감지센서': 'leak_sensor', '다목적 센서 (문열림 센서)': 'multi_sensor', '도어록': 'doorlock', '동작감지센서': 'motion_sensor', '방범창': 'security_window', '비전 센서': 'vision_sensor', '연기 감지기': 'smoke_detector', '열림/닫힘 센서': 'open_close_sensor', '온도/습도': 'temp_hum_sensor', '온도/습도 센서': 'temp_hum_sensor', '재실 감지 센서': 'presence_sensor', '조도 센서': 'illuminance_sensor', '초인종': 'doorbell', '카메라': 'camera', '태그/트래커': 'tag_tracker',
+      '리피터/확장기': 'repeater', '브릿지': 'bridge', '스마트 홈 어댑터(동글)': 'adapter', '스마트 홈 허브': 'hub',
+      'Buds': 'buds', '링': 'ring', '워치': 'watch',
+      '베개': 'pillow', '체온계': 'thermometer', '체중계': 'scale', '피트니스 매트': 'fitness_mat', '혈당측정기': 'glucometer', '혈압계': 'blood_pressure',
+      '금고': 'safe', '리모컨/버튼': 'remote_button', '무선 충전기': 'wireless_charger', '반려동물 급식기': 'pet_feeder', '밸브': 'valve', '비데': 'bidet', '스프링클러': 'sprinkler', '온열매트': 'heating_mat', '자동차': 'car', '전기차 충전기': 'ev_charger', '차고 문': 'garage_door', '창문 개폐기': 'window_opener', '커튼/블라인드': 'curtain_blind', '홈 로봇': 'home_robot', '기타': 'other'
+    };
+    const DEFAULT_PRESETS = [
+      { name: '스마트 스피커', device: '스마트 스피커', automation: '기상 자동화', protocol: 'Wi-Fi', qty: 1 },
+      { name: '홈 엔터', device: '사운드바', automation: '영화모드 자동화', protocol: 'Wi-Fi', qty: 1 },
+      { name: '조명 제어', device: '전구', automation: '외출 시 자동 꺼짐', protocol: 'Zigbee', qty: 2 },
+      { name: '보안 기본', device: '문열림 센서', automation: '침입 알림', protocol: 'Zigbee', qty: 1 }
+    ];
+    const PROTOCOLS = ['Zigbee', 'Z-Wave', 'Matter over Wi-Fi', 'Matter over Thread', 'Wi-Fi', 'Bluetooth', 'Thread', 'Galaxy Find Network'];
+    const AUTOMATIONS = DEFAULT_PRESETS.map(p => p.automation).concat(['영화모드 자동화', '외출 시 자동화', '기상 자동화', '취침 모드']);
+
+    // --- ICON HELPER ---
+    function getIcon(name, size = 20, className = "") {
+      const paths = {
+        Menu: '<line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/>',
+        Camera: '<path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/>',
+        MoreHorizontal: '<circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/>',
+        Plus: '<path d="M5 12h14"/><path d="M12 5v14"/>',
+        Settings: '<path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.1a2 2 0 0 1-1-1.72v-.51a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/>',
+        HelpCircle: '<circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/>',
+        Smartphone: '<rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/>',
+        Trash2: '<path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/>',
+        Copy: '<rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>',
+        ArrowUp: '<path d="m5 12 7-7 7 7"/><path d="M12 19V5"/>',
+        ArrowDown: '<path d="M12 5v14"/><path d="m19 12-7 7-7-7"/>',
+        LogOut: '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/>',
+        RotateCcw: '<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 12"/><path d="M3 5v7h7"/>',
+        Moon: '<path d="M12 3a6 6 0 0 0 9 9 9 0 1 1-9-9Z"/>',
+        Box: '<path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" x2="12" y1="22.08" y2="12"/>',
+        Check: '<polyline points="20 6 9 17 4 12"/>',
+        X: '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
+        ArrowLeft: '<path d="m12 19-7-7 7-7"/><path d="M19 12H5"/>',
+        AlertTriangle: '<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" x2="12" y1="9" y2="13"/><line x1="12" x2="12.01" y1="17" y2="17"/>',
+        Info: '<circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="16" y2="12"/><line x1="12" x2="12.01" y1="8" y2="8"/>',
+        Bell: '<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>'
+      };
+      return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="${className}">${paths[name] || ''}</svg>`;
+    }
+
+    // --- PROGRESSIVE AUTOMATION SCORE ENGINE (FSM & Rules) ---
+    const AutomationAnalyzer = (() => {
+      // Utilities
+      const hasCap = (dev, cap) => (CAPABILITY_MAP[dev] || []).includes(cap);
+      const getDeviceList = (rooms) => rooms.flatMap((r, ri) => r.rows.map(row => ({ ...row, rIdx: ri, caps: CAPABILITY_MAP[row.device] || [] })));
+
+      function analyze(rooms) {
+        let reasons = [];
+        const devices = getDeviceList(rooms);
+        
+        // --- 1. PRE-CALC / CLASSIFICATION ---
+        const hubTypes = new Set();
+        devices.forEach(d => {
+          if (d.caps.includes('hub_zigbee')) hubTypes.add('Zigbee');
+          if (d.caps.includes('hub_thread')) hubTypes.add('Thread');
+          if (d.caps.includes('hub_zwave')) hubTypes.add('Z-Wave');
+          if (d.protocol && (d.protocol.toLowerCase().includes('wi-fi') || d.protocol.toLowerCase().includes('matter'))) hubTypes.add('Wi-Fi');
+        });
+
+        const zigbeeDevs = devices.filter(d => d.protocol && d.protocol.toLowerCase().includes('zigbee'));
+        const zwaveDevs = devices.filter(d => d.protocol && d.protocol.toLowerCase().includes('z-wave'));
+        const threadDevs = devices.filter(d => d.protocol && d.protocol.toLowerCase().includes('thread'));
+        
+        // --- 2. NEGATIVE RULES (Penalties) ---
+        // N01: ZIGBEE_NO_HUB (-25)
+        if (zigbeeDevs.length > 0 && !hubTypes.has('Zigbee')) {
+          reasons.push({ code: 'ZIGBEE_NO_HUB', severity: 'critical', impact: -25, message: 'Zigbee 기기가 있지만 허브가 없습니다.', related: zigbeeDevs });
+        }
+        // N02: ZWAVE_NO_HUB (-25)
+        if (zwaveDevs.length > 0 && !hubTypes.has('Z-Wave')) {
+          reasons.push({ code: 'ZWAVE_NO_HUB', severity: 'critical', impact: -25, message: 'Z-Wave 기기가 있지만 허브가 없습니다.', related: zwaveDevs });
+        }
+        // N03: THREAD_NO_BORDER_ROUTER (-20)
+        if (threadDevs.length > 0 && !hubTypes.has('Thread')) {
+          reasons.push({ code: 'THREAD_NO_BORDER_ROUTER', severity: 'critical', impact: -20, message: 'Thread 기기를 위한 보더 라우터가 필요합니다.', related: threadDevs });
+        }
+        
+        // N14 & N13: Empty Rooms
+        let emptyCount = 0;
+        rooms.forEach(r => { if (r.rows.length === 0) emptyCount++; });
+        if (rooms.length > 0 && emptyCount === rooms.length) {
+           reasons.push({ code: 'ALL_ROOMS_EMPTY', severity: 'critical', impact: -30, message: '모든 방이 비어있습니다. 기기를 추가하세요.', related: [] });
+        } else if (emptyCount > 0) {
+           rooms.forEach(r => {
+             if (r.rows.length === 0) {
+               // First 2 empty rooms: -3, else -5. Using simplified logic (accumulated)
+               reasons.push({ code: 'ROOM_EMPTY', severity: 'minor', impact: -3, message: `'${r.name}' 방이 비어있습니다.`, related: [] });
+             }
+           });
+        }
+
+        // --- 3. POSITIVE RULES (Bonuses) with Caps ---
+        let bonusScores = { auto: 0, multi: 0, cover: 0, etc: 0 };
+        
+        // P01: HUB_PRESENT (+10, once per type)
+        if (hubTypes.has('Zigbee')) reasons.push({ code: 'HUB_PRESENT_ZIGBEE', severity: 'major', impact: 10, message: 'Zigbee 허브 보유', related: [] });
+        if (hubTypes.has('Thread') && !hubTypes.has('Zigbee')) reasons.push({ code: 'HUB_PRESENT_THREAD', severity: 'major', impact: 10, message: 'Thread 보더 라우터 보유', related: [] });
+        
+        // P03 ~ P07: Automations (Capped)
+        // Group devices by room for automation check
+        const roomDevs = rooms.map((r, i) => ({ 
+            idx: i, 
+            name: r.name,
+            light: r.rows.filter(d => hasCap(d.device, 'light')),
+            sensor_motion: r.rows.filter(d => hasCap(d.device, 'sensor_motion') || hasCap(d.device, 'sensor_presence') || hasCap(d.device, 'switch')),
+            airq: r.rows.filter(d => hasCap(d.device, 'sensor_air')),
+            hvac: r.rows.filter(d => hasCap(d.device, 'hvac') || hasCap(d.device, 'ventilation')),
+            cook: r.rows.filter(d => hasCap(d.device, 'cooktop')),
+            hood: r.rows.filter(d => hasCap(d.device, 'hood')),
+            sec_dev: r.rows.filter(d => hasCap(d.device, 'doorlock') || hasCap(d.device, 'camera')),
+            sec_sens: r.rows.filter(d => hasCap(d.device, 'sensor_contact') || hasCap(d.device, 'sensor_motion')),
+            energy: r.rows.filter(d => hasCap(d.device, 'energy_monitor') || hasCap(d.device, 'smart_plug'))
+        }));
+
+        let autoCap = 0;
+        let coverageSet = new Set(); // For P10
+        
+        roomDevs.forEach(rd => {
+            // P03 Lighting (+8)
+            if (rd.light.length > 0 && rd.sensor_motion.length > 0) {
+                 if(autoCap < 40) { reasons.push({ code: 'AUTO_LIGHT', severity: 'info', impact: 8, message: `${rd.name}: 조명 자동화 가능`, related: [] }); autoCap+=8; coverageSet.add('light'); }
+            } else if (rd.light.length > 0) {
+                 reasons.push({ code: 'MISS_AUTO_LIGHT', severity: 'minor', impact: -5, message: `${rd.name}: 조명 자동화 센서 부족`, related: [] });
+            }
+
+            // P04 Aircare (+8)
+            if (rd.airq.length > 0 && rd.hvac.length > 0) {
+                 if(autoCap < 40) { reasons.push({ code: 'AUTO_AIR', severity: 'info', impact: 8, message: `${rd.name}: 공기질 자동화 가능`, related: [] }); autoCap+=8; coverageSet.add('air'); }
+            } else if (rd.airq.length > 0) {
+                 reasons.push({ code: 'MISS_AUTO_AIR', severity: 'minor', impact: -6, message: `${rd.name}: 공기질 센서 활용 기기 부족`, related: [] });
+            }
+
+            // P05 Kitchen (+6)
+            if (rd.cook.length > 0 && rd.hood.length > 0) {
+                 if(autoCap < 40) { reasons.push({ code: 'AUTO_KITCHEN', severity: 'info', impact: 6, message: `${rd.name}: 주방 환기 자동화 가능`, related: [] }); autoCap+=6; coverageSet.add('kitchen'); }
+            } else if (rd.cook.length > 0) {
+                 reasons.push({ code: 'MISS_KITCHEN', severity: 'minor', impact: -5, message: `${rd.name}: 쿡탑 연동 후드 부족`, related: [] });
+            }
+
+            // P06 Security (+7)
+            if (rd.sec_dev.length > 0 && rd.sec_sens.length > 0) {
+                 if(autoCap < 40) { reasons.push({ code: 'AUTO_SEC', severity: 'info', impact: 7, message: `${rd.name}: 보안 자동화 가능`, related: [] }); autoCap+=7; coverageSet.add('sec'); }
+            } else if (rd.sec_dev.length > 0) {
+                 reasons.push({ code: 'MISS_SEC', severity: 'major', impact: -7, message: `${rd.name}: 보안 기기 연동 센서 부족`, related: [] });
+            }
+
+            // P07 Energy (+6)
+            if (rd.energy.length > 0 && rd.sensor_motion.length > 0) {
+                 if(autoCap < 40) { reasons.push({ code: 'AUTO_ENERGY', severity: 'info', impact: 6, message: `${rd.name}: 에너지 절약 자동화 가능`, related: [] }); autoCap+=6; }
+            }
+        });
+
+        // P10 Coverage Bonus (+8)
+        if (coverageSet.size >= 3) {
+            reasons.push({ code: 'COVERAGE_BONUS', severity: 'major', impact: 8, message: '핵심 3개 이상 영역 자동화 커버', related: [] });
+        }
+
+        // P12 Wi-Fi Only (+2)
+        if (devices.length > 0 && devices.every(d => !d.protocol || d.protocol.includes('Wi-Fi')) && zigbeeDevs.length === 0 && zwaveDevs.length === 0) {
+           reasons.push({ code: 'WIFI_ONLY_OK', severity: 'info', impact: 2, message: 'Wi-Fi 전용 구성 (허브 불필요)', related: [] });
+        }
+
+        // P08/P09 Multi Integration
+        const autoCount = reasons.filter(r => r.code.startsWith('AUTO_')).length;
+        if (autoCount >= 3) {
+           reasons.push({ code: 'GOOD_MULTI_INTEGRATION', severity: 'major', impact: 12, message: '강력한 멀티 디바이스 연동', related: [] });
+        } else if (autoCount >= 1) {
+           reasons.push({ code: 'BASIC_MULTI_INTEGRATION', severity: 'info', impact: 6, message: '기본적인 자동화 연동', related: [] });
+        }
+
+        return reasons;
+      }
+
+      function computeScore(reasons) {
+        let score = 40; // Base Score
+        reasons.forEach(r => score += r.impact);
+        return Math.max(0, Math.min(100, Math.round(score)));
+      }
+
+      return { analyze, computeScore };
+    })();
+
+    // --- UI CONTROLLER FOR SCORE & NOTIFICATIONS ---
+    const ScoreUI = (() => {
+      const getEl = (id) => document.getElementById(id);
+      let isNotifOpen = false;
+      let isExpanded = true; // Default to expanded when opened via bell
+      let currentReasons = [];
+      let currentScore = 0;
+
+      function render(rooms) {
+        currentReasons = AutomationAnalyzer.analyze(rooms);
+        currentScore = AutomationAnalyzer.computeScore(currentReasons);
+        
+        // Update Bar
+        const barFill = getEl('pas-fill');
+        let color, statusText;
+        if (currentScore === 100) { color = '#008DF7'; statusText = '최적'; }
+        else if (currentScore >= 66) { color = '#22c55e'; statusText = '양호'; }
+        else if (currentScore >= 33) { color = '#F97316'; statusText = '경고'; }
+        else { color = '#EF4444'; statusText = '위험'; }
+        
+        barFill.style.width = `${currentScore}%`;
+        barFill.style.backgroundColor = color;
+        
+        const valEl = getEl('pas-val');
+        valEl.innerText = currentScore;
+        valEl.style.color = color;
+        
+        const statusEl = getEl('pas-status-text');
+        statusEl.innerText = statusText;
+        statusEl.style.color = color;
+
+        // Update Description
+        const criticals = currentReasons.filter(r => r.severity === 'critical');
+        const descEl = getEl('pas-desc');
+        if (criticals.length > 0) {
+          descEl.innerText = `${criticals[0].message}`;
+          descEl.className = "text-xs font-bold text-red-500 text-right truncate max-w-[200px]";
+        } else if (currentScore >= 80) {
+          descEl.innerText = "훌륭한 스마트홈 설계입니다!";
+          descEl.className = "text-xs font-bold text-brand text-right";
+        } else {
+          descEl.innerText = "제안 항목을 확인해보세요.";
+          descEl.className = "text-xs font-bold text-slate-400 text-right";
+        }
+
+        renderBell();
+        if(isNotifOpen) renderStack();
+      }
+
+      function renderBell() {
+        const btn = getEl('btn-gnb-notif');
+        if(!btn.innerHTML.includes('<svg')) {
+           btn.innerHTML = `${getIcon('Bell', 20)}<span class="nudge-dot"></span>`;
+        }
+        const dot = btn.querySelector('.nudge-dot');
+        if(currentReasons.length > 0) dot.style.display = 'block';
+        else dot.style.display = 'none';
+        
+        btn.setAttribute('aria-pressed', isNotifOpen);
+      }
+
+      function toggleNotif() {
+        isNotifOpen = !isNotifOpen;
+        isExpanded = true; // Reset to expanded when opening
+        renderBell();
+        renderStack();
+      }
+      
+      function closeNotif() {
+        if(!isNotifOpen) return;
+        isNotifOpen = false;
+        renderBell();
+        renderStack();
+      }
+
+      function renderStack() {
+        const stack = getEl('notif-stack');
+        const backdrop = getEl('notif-backdrop');
+        
+        if (!isNotifOpen) {
+           stack.classList.remove('open');
+           backdrop.classList.remove('active');
+           // small delay to allow transition before clearing html? No need, cleaner to keep logic simple
+           return;
+        }
+
+        stack.classList.add('open');
+        backdrop.classList.add('active');
+        
+        // Sorting: Critical > Major > Minor > Info
+        const sorted = [...currentReasons].sort((a,b) => {
+          const map = { critical: 4, major: 3, minor: 2, info: 1 };
+          return map[b.severity] - map[a.severity];
+        });
+
+        if (sorted.length === 0) {
+          stack.innerHTML = `<div class="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-100 dark:border-slate-700 shadow-xl text-center text-sm text-slate-500">알림이 없습니다.</div>`;
+          return;
+        }
+
+        // FOLDED STATE UI (Recent 1 + Preview)
+        if (!isExpanded) {
+           stack.classList.add('folded');
+           const top = sorted[0];
+           const count = sorted.length;
+           stack.innerHTML = `
+            <div class="stack-preview"></div>
+            <div class="stack-preview"></div>
+            <div class="stack-card p-4 flex items-center justify-between cursor-pointer hover:scale-[1.02] active:scale-95" id="stack-expand-btn">
+              <div class="flex items-center gap-3 overflow-hidden">
+                <div class="severity-dot ${top.severity} shrink-0"></div>
+                <div class="flex flex-col overflow-hidden">
+                  <span class="text-xs font-bold text-slate-800 dark:text-slate-100 truncate">${top.message}</span>
+                  <span class="text-[10px] text-slate-500 truncate">${count > 1 ? `외 ${count-1}건의 항목이 있습니다.` : '탭하여 자세히 보기'}</span>
+                </div>
+              </div>
+            </div>`;
+           getEl('stack-expand-btn').onclick = () => { isExpanded = true; renderStack(); };
+        } 
+        // EXPANDED STATE UI (List)
+        else {
+           stack.classList.remove('folded');
+           let html = `
+            <div class="stack-card p-2 flex flex-col gap-2 max-h-[70vh] flex-1">
+              <div class="flex justify-between items-center px-2 pt-1 pb-1">
+                <span class="text-xs font-bold text-slate-500">Analysis Result (${sorted.length})</span>
+                <div class="flex gap-1">
+                   <button id="stack-fold" class="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-slate-400" title="접기">${getIcon('ArrowDown', 14)}</button>
+                   <button id="stack-close" class="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded text-slate-400" title="닫기">${getIcon('X', 14)}</button>
+                </div>
+              </div>
+              <div class="overflow-y-auto no-scrollbar space-y-2 px-1 pb-1">
+           `;
+           html += sorted.map(r => `
+            <div class="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 flex gap-3 border-l-4 ${r.impact > 0 ? 'border-l-brand' : 'border-l-red-400'} animate-fadeIn">
+              <div class="pt-1 shrink-0">${getSeverityIcon(r.severity, r.impact)}</div>
+              <div class="flex-1 min-w-0">
+                <div class="flex justify-between items-start gap-2">
+                  <div class="text-xs font-bold text-slate-800 dark:text-slate-100 leading-tight">${r.message}</div>
+                  <div class="text-[10px] font-black ${r.impact > 0 ? 'text-brand' : 'text-red-500'} shrink-0">
+                    ${r.impact > 0 ? '+' : ''}${r.impact}
+                  </div>
+                </div>
+                ${r.related && r.related.length ? `<div class="text-[10px] text-slate-400 mt-1 truncate">관련: ${r.related.map(d=>d.caps.includes('hub') ? '허브' : d.device).join(', ')}</div>` : ''}
+              </div>
+            </div>
+           `).join('');
+           html += `<button id="btn-show-logic" class="text-[10px] text-center w-full py-2 underline text-slate-400 hover:text-brand">점수 산출 원리 보기</button></div></div>`;
+           stack.innerHTML = html;
+           
+           getEl('stack-fold').onclick = () => { isExpanded = false; renderStack(); };
+           getEl('stack-close').onclick = closeNotif;
+           getEl('btn-show-logic').onclick = ScoreUI.openLogicModal;
+        }
+      }
+
+      function getSeverityIcon(s, impact) {
+        if(s==='critical') return `<div class="text-red-500">${getIcon('AlertTriangle', 16)}</div>`;
+        if(s==='major') return `<div class="text-orange-500">${getIcon('AlertTriangle', 16)}</div>`;
+        if(impact > 0) return `<div class="text-brand">${getIcon('Check', 16)}</div>`; 
+        return `<div class="text-yellow-500">${getIcon('Info', 16)}</div>`;
+      }
+      
+      function openLogicModal() {
+        const html = `
+          <div class="p-6 space-y-6 text-slate-700 dark:text-slate-300 leading-relaxed text-sm">
+            <p><strong>Progressive Automation Score</strong>는 스마트홈 자동화의 품질(0~100)을 수치화한 것입니다.</p>
+            <div class="space-y-2">
+              <h4 class="font-bold text-slate-900 dark:text-white">계산 원리 (Base: 40)</h4>
+              <ul class="list-disc pl-5 space-y-1 text-xs">
+                <li><strong>가산점 (+):</strong> 허브 보유, 조명/보안/공기질/주방/에너지 자동화 구성, 멀티 디바이스 연동, 핵심 영역 커버 등</li>
+                <li><strong>감점 (-):</strong> Zigbee/Thread 허브 누락, 프로토콜 불일치, 센서 누락, 빈 방 방치 등</li>
+              </ul>
+            </div>
+            <div class="space-y-2">
+              <h4 class="font-bold text-slate-900 dark:text-white">상태 기준</h4>
+              <div class="grid grid-cols-2 gap-2 text-xs font-bold text-white text-center">
+                <div class="p-2 bg-red-500 rounded">0-32 위험<br><span class="text-[10px] font-normal text-white/80">필수 허브 누락 등</span></div>
+                <div class="p-2 bg-orange-500 rounded">33-65 경고<br><span class="text-[10px] font-normal text-white/80">자동화 센서 부족</span></div>
+                <div class="p-2 bg-green-500 rounded">66-99 양호<br><span class="text-[10px] font-normal text-white/80">대부분 자동화 가능</span></div>
+                <div class="p-2 bg-[#008DF7] rounded">100 최적<br><span class="text-[10px] font-normal text-white/80">완벽한 설계</span></div>
+              </div>
+            </div>
+          </div>`;
+        openModal(html, '점수 산출 원리');
+      }
+
+      return { render, toggleNotif, closeNotif, openLogicModal };
+    })();
+
+    // --- APP LOGIC ---
+    const state = {
+      rooms: [],
+      activeRoomIdx: 0,
+      sidebarMode: 'expanded',
+      theme: 'light',
+      visibleRowIds: new Set()
+    };
+
+    // Storage
+    const loadRooms = () => {
+      try {
+        const r = localStorage.getItem(STORAGE_KEY);
+        return r ? JSON.parse(r) : createDefaultRooms();
+      } catch (e) { return createDefaultRooms(); }
+    };
+    const createDefaultRooms = () => [{ name: '거실', rows: [{ __rid: Math.random().toString(36).slice(2), device: '스마트 스피커', protocol: 'Wi-Fi', automation: '기상 자동화', qty: 1 }] }];
+    const saveRooms = () => {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state.rooms));
+      ScoreUI.render(state.rooms); // Hook for Score Update
+    };
+    const loadTheme = () => localStorage.getItem('shoppingthings:theme') || 'light';
+    const saveTheme = (t) => localStorage.setItem('shoppingthings:theme', t);
+
+    // Main Init
+    function init() {
+      state.rooms = loadRooms();
+      state.theme = loadTheme();
+      applyTheme();
+      renderAll(); 
+      setupGlobalDelegation(); 
+      setupIndicatorObserver();
+      window.addEventListener('resize', handleResize);
+      handleResize();
+      bindStaticEvents();
+      ScoreUI.render(state.rooms); // Initial Score Render
+      
+      // Top Bar Click - Updated selector to new widget ID
+      const pasWrapper = document.getElementById('pas-wrapper');
+      if (pasWrapper) {
+          pasWrapper.addEventListener('click', () => {
+             ScoreUI.toggleNotif(); // Clicking score bar opens notifications
+          });
+      }
+      
+      // Backdrop / Esc
+      document.getElementById('notif-backdrop').addEventListener('click', ScoreUI.closeNotif);
+      document.addEventListener('keydown', (e) => {
+         if(e.key === 'Escape') ScoreUI.closeNotif();
+      });
+    }
+
+    function bindStaticEvents() {
+      const getEl = (id) => document.getElementById(id);
+      if(getEl('btn-sidebar-toggle')) getEl('btn-sidebar-toggle').addEventListener('click', toggleSidebar);
+      if(getEl('btn-export-pc')) getEl('btn-export-pc').addEventListener('click', exportToPNG);
+      if(getEl('btn-export-mobile')) getEl('btn-export-mobile').addEventListener('click', exportToPNG);
+      if(getEl('btn-gnb-more')) getEl('btn-gnb-more').addEventListener('click', (e) => openGnbPopover(e.currentTarget));
+      if(getEl('btn-gnb-notif')) getEl('btn-gnb-notif').addEventListener('click', ScoreUI.toggleNotif); // Bell click
+      if(getEl('nav-help')) getEl('nav-help').addEventListener('click', openHelpModal);
+      if(getEl('mobile-nav-help')) getEl('mobile-nav-help').addEventListener('click', openHelpModal);
+    }
+
+    function renderAll() {
+      renderHeader();
+      renderSidebar();
+      renderWidgets();
+      renderRooms();
+      renderIndicators();
+      updateFab();
+    }
+
+    function applyTheme() {
+      const root = document.documentElement;
+      if (state.theme === 'dark') root.classList.add('dark');
+      else root.classList.remove('dark');
+    }
+
+    function handleResize() {
+      const w = window.innerWidth;
+      if (w < 768) state.sidebarMode = 'hidden';
+      else if (w < 1280) state.sidebarMode = 'collapsed';
+      else state.sidebarMode = 'expanded';
+      renderSidebar();
+      renderMainLayoutClass();
+    }
+
+    function renderMainLayoutClass() {
+      const main = document.getElementById('main-content');
+      const sidebar = document.getElementById('sidebar');
+      if(state.sidebarMode === 'hidden') {
+        sidebar.classList.add('hidden'); sidebar.classList.remove('flex');
+        main.className = `flex-1 transition-all duration-300 min-w-0`;
+      } else {
+        sidebar.classList.remove('hidden'); sidebar.classList.add('flex');
+        main.className = `flex-1 transition-all duration-300 min-w-0 ${state.sidebarMode === 'expanded' ? 'md:ml-52' : 'md:ml-20'}`;
+      }
+    }
+
+    function toggleSidebar() {
+      state.sidebarMode = state.sidebarMode === 'expanded' ? 'collapsed' : 'expanded';
+      renderSidebar();
+      renderMainLayoutClass();
+    }
+
+    // Render Functions
+    function renderHeader() {
+      const menuBtn = document.getElementById('btn-sidebar-toggle');
+      if(menuBtn && !menuBtn.innerHTML.includes('<svg')) menuBtn.innerHTML = getIcon('Menu', 20);
+      const exportPc = document.getElementById('btn-export-pc');
+      if(exportPc && !exportPc.innerHTML.includes('PNG')) exportPc.innerHTML = `${getIcon('Camera', 16)} PNG 저장`;
+      const moreBtn = document.getElementById('btn-gnb-more');
+      if(moreBtn && !moreBtn.innerHTML.includes('<svg')) moreBtn.innerHTML = getIcon('MoreHorizontal', 20);
+
+      const generateTabs = () => {
+        let html = state.rooms.map((r, i) => `
+          <button data-action="select-room" data-idx="${i}" 
+            class="px-4 py-1.5 rounded-full text-sm font-bold whitespace-nowrap transition-all ${state.activeRoomIdx === i ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900' : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'}">
+            ${r.name || '이름없음'}
+          </button>
+        `).join('');
+        html += `<button data-action="add-room" class="px-3 py-1.5 rounded-full text-sm font-bold text-brand hover:bg-brand/10 whitespace-nowrap flex items-center gap-1">${getIcon('Plus', 14)} ${window.innerWidth >= 768 ? '방 추가' : ''}</button>`;
+        return html;
+      };
+      
+      const pcTabs = document.getElementById('pc-tabs-container');
+      const mobileTabs = document.getElementById('mobile-tabs-container');
+      if(pcTabs) { pcTabs.innerHTML = generateTabs(); setupDragScroll(pcTabs); }
+      if(mobileTabs) { mobileTabs.innerHTML = generateTabs(); setupDragScroll(mobileTabs); }
+    }
+
+    function renderSidebar() {
+      const sidebar = document.getElementById('sidebar');
+      const deviceBtn = document.getElementById('nav-device');
+      const helpBtn = document.getElementById('nav-help');
+      
+      if (deviceBtn && !deviceBtn.querySelector('svg')) deviceBtn.insertAdjacentHTML('afterbegin', getIcon('Smartphone', 20, 'shrink-0'));
+      if (helpBtn && !helpBtn.querySelector('svg')) helpBtn.insertAdjacentHTML('afterbegin', getIcon('HelpCircle', 20, 'shrink-0'));
+
+      const textSpans = sidebar.querySelectorAll('button > span');
+      
+      if (state.sidebarMode === 'expanded') {
+        sidebar.classList.replace('w-16', 'w-48'); sidebar.classList.remove('items-center');
+        deviceBtn.className = `flex items-center gap-3 rounded-xl border shadow-sm transition-all text-left px-4 py-3 bg-white/50 dark:bg-slate-800/50 hover:bg-white dark:hover:bg-slate-800 text-brand border-slate-100 dark:border-slate-700 font-bold`;
+        helpBtn.className = `flex items-center gap-3 rounded-xl border border-transparent transition-all text-left px-4 py-3 hover:bg-white/50 dark:hover:bg-slate-800/50 text-slate-500 dark:text-slate-400 hover:border-slate-100 dark:hover:border-slate-700 font-bold`;
+        textSpans.forEach(s => s.style.display = 'inline');
+      } else {
+        sidebar.classList.replace('w-48', 'w-16'); sidebar.classList.add('items-center');
+        deviceBtn.className = `p-3 justify-center bg-white dark:bg-slate-800 text-brand border-slate-100 dark:border-slate-700 rounded-xl border flex`;
+        helpBtn.className = `p-3 justify-center hover:bg-white/50 dark:hover:bg-slate-800/50 text-slate-500 dark:text-slate-400 rounded-xl flex`;
+        textSpans.forEach(s => s.style.display = 'none');
+      }
+    }
+
+    function renderWidgets() {
+      const counts = {};
+      state.rooms.forEach(r => r.rows.forEach(row => {
+        if(!row.device) return;
+        counts[row.device] = (counts[row.device] || 0) + (row.qty || 1);
+      }));
+      const keys = Object.keys(counts);
+      const container = document.getElementById('widgets-area');
+      if (keys.length === 0) {
+        container.innerHTML = `<div class="text-slate-400 text-sm py-4 col-span-full">기기가 없습니다.</div>`;
+        return;
+      }
+      container.innerHTML = keys.map(key => {
+        const filename = DEVICE_ICON_MAP[key] || 'other';
+        const imgSrc = `images/icons/deviceprofiles/${filename}.png`;
+        const webpSrc = `images/icons/deviceprofiles/${filename}.webp`;
+        return `
+          <div class="flex items-center gap-3 p-2 rounded-full bg-white/70 dark:bg-slate-800/70 backdrop-blur-sm border border-slate-100 dark:border-slate-700 shadow-sm min-w-0">
+            <div class="w-7 h-7 rounded-full bg-white dark:bg-slate-700 border border-slate-100 dark:border-slate-600 flex items-center justify-center shrink-0 text-brand overflow-hidden p-1 text-lg">
+              <img src="${imgSrc}" onerror="this.src='${webpSrc}';this.onerror=()=>{this.parentElement.innerText='🔘'}" class="w-full h-full object-contain">
+            </div>
+            <div class="flex-1 overflow-hidden min-w-0">
+               <div class="whitespace-nowrap text-sm font-medium text-slate-700 dark:text-slate-200 marquee-check">${key}</div>
+            </div>
+            <div class="font-bold text-brand-dark dark:text-brand-light text-sm pr-2 shrink-0">${counts[key]}</div>
+          </div>
+        `;
+      }).join('');
+      document.querySelectorAll('.marquee-check').forEach(el => {
+        if (el.scrollWidth > el.parentElement.clientWidth) el.classList.add('animate-marquee', 'pl-[100%]');
+      });
+    }
+
+    function renderRooms() {
+      const container = document.getElementById('rooms-area');
+      container.innerHTML = '';
+      state.rooms.forEach((room, rIdx) => {
+        const section = document.createElement('section');
+        section.className = "room-card bg-white/70 dark:bg-slate-900/50 backdrop-blur-md border border-white/40 dark:border-slate-800 shadow-xl shadow-slate-200/40 dark:shadow-none rounded-[2rem] p-1 md:p-6 overflow-hidden relative";
+        section.dataset.roomIdx = rIdx;
+        
+        const headerHTML = `
+          <div class="flex items-center justify-between mb-6 px-4 pt-4 md:pt-0">
+            <input type="text" value="${room.name}" data-room="${rIdx}" data-field="room-name" class="room-name-input text-2xl font-black bg-transparent border-none outline-none placeholder:text-slate-300 dark:placeholder:text-slate-600 text-slate-800 dark:text-white w-full max-w-md" placeholder="방 이름 입력" maxlength="20">
+            <div class="flex items-center gap-2">
+              <button data-action="add-row" data-room="${rIdx}" class="hidden md:flex bg-blue-50 dark:bg-brand/20 text-brand dark:text-brand-light hover:bg-brand hover:text-white px-3 py-1.5 rounded-full text-sm font-bold transition-all">+ 기기 추가</button>
+              <button data-action="room-more" data-room="${rIdx}" class="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full text-slate-400">${getIcon('MoreHorizontal', 20)}</button>
+            </div>
+          </div>`;
+        
+        if (room.rows.length === 0) {
+          section.innerHTML = headerHTML + `
+            <div class="border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-2xl p-8 flex flex-col items-center justify-center gap-4 text-center mx-4 mb-4">
+              <div class="text-slate-400 dark:text-slate-500 font-medium">이 방에는 아직 기기가 없습니다.</div>
+              <div class="flex gap-3">
+                <button data-action="add-row" data-room="${rIdx}" class="px-4 py-2 bg-brand text-white rounded-full font-bold text-sm shadow-lg shadow-brand/20 hover:scale-105 transition-transform">기기 직접 추가</button>
+                <button data-action="preset-modal" data-room="${rIdx}" class="px-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 rounded-full font-bold text-sm hover:bg-slate-50 dark:hover:bg-slate-700">프리셋 불러오기</button>
+              </div>
+            </div>`;
+        } else {
+          let rowsHtml = '';
+          room.rows.forEach((row, rowIdx) => {
+            rowsHtml += `
+              <tr class="bg-white dark:bg-slate-800 md:bg-transparent border border-slate-100 dark:border-slate-800 md:border-b md:border-slate-100/50 dark:md:border-slate-700/50 rounded-xl md:rounded-none shadow-sm md:shadow-none flex flex-col md:table-row p-4 md:p-0 relative group hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors" data-row-id="${row.__rid}">
+                <td class="p-1 md:p-3 block md:table-cell relative">
+                  <span class="md:hidden text-xs font-bold text-slate-400 mb-1 block">디바이스</span>
+                  <div class="absolute left-3 top-[36px] md:top-[22px] text-slate-400 pointer-events-none z-10 w-5 flex justify-center">🔧</div>
+                  <input class="w-full bg-transparent border border-transparent hover:border-slate-200 focus:border-brand-light focus:bg-white dark:focus:bg-slate-800 rounded-xl py-2.5 pr-10 pl-10 text-slate-800 dark:text-slate-100 placeholder:text-slate-400 outline-none transition-all"
+                    value="${row.device}" placeholder="디바이스 이름" data-room="${rIdx}" data-row="${rowIdx}" data-field="device" data-ac-type="device">
+                  <div class="absolute right-2 top-[34px] md:top-[20px] z-10">
+                    <button data-action="device-modal" data-room="${rIdx}" data-row="${rowIdx}" class="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-md text-brand">${getIcon('Plus', 16)}</button>
+                  </div>
+                </td>
+                <td class="p-1 md:p-3 block md:table-cell relative">
+                  <span class="md:hidden text-xs font-bold text-slate-400 mb-1 block">프로토콜</span>
+                  <div class="absolute left-3 top-[36px] md:top-[22px] text-slate-400 pointer-events-none z-10 w-5 flex justify-center">🔗</div>
+                  <input class="w-full bg-transparent border border-transparent hover:border-slate-200 focus:border-brand-light focus:bg-white dark:focus:bg-slate-800 rounded-xl py-2.5 pr-10 pl-10 text-slate-800 dark:text-slate-100 placeholder:text-slate-400 outline-none transition-all"
+                    value="${row.protocol}" placeholder="예: Zigbee" data-room="${rIdx}" data-row="${rowIdx}" data-field="protocol" data-ac-type="protocol">
+                </td>
+                <td class="p-1 md:p-3 block md:table-cell relative">
+                  <span class="md:hidden text-xs font-bold text-slate-400 mb-1 block">자동화</span>
+                  <div class="absolute left-3 top-[36px] md:top-[22px] text-slate-400 pointer-events-none z-10 w-5 flex justify-center">⚡</div>
+                  <input class="w-full bg-transparent border border-transparent hover:border-slate-200 focus:border-brand-light focus:bg-white dark:focus:bg-slate-800 rounded-xl py-2.5 pr-10 pl-10 text-slate-800 dark:text-slate-100 placeholder:text-slate-400 outline-none transition-all"
+                    value="${row.automation}" placeholder="예: 기상 자동화" data-room="${rIdx}" data-row="${rowIdx}" data-field="automation" data-ac-type="automation">
+                </td>
+                <td class="p-1 md:p-3 block md:table-cell">
+                  <div class="flex items-center justify-between md:justify-center gap-2 md:w-full">
+                    <span class="md:hidden text-xs font-bold text-slate-400">수량</span>
+                    <div class="flex items-center bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-2 py-1">
+                      <button data-action="qty-dec" data-room="${rIdx}" data-row="${rowIdx}" class="w-6 h-6 flex items-center justify-center text-slate-400 hover:text-brand font-bold">-</button>
+                      <input type="number" value="${row.qty}" class="qty-input w-8 text-center bg-transparent font-bold text-slate-800 dark:text-slate-200 outline-none text-sm" data-room="${rIdx}" data-row="${rowIdx}">
+                      <button data-action="qty-inc" data-room="${rIdx}" data-row="${rowIdx}" class="w-6 h-6 flex items-center justify-center text-slate-400 hover:text-brand font-bold">+</button>
+                    </div>
+                  </div>
+                </td>
+                <td class="p-1 md:p-3 absolute top-2 right-2 md:relative md:top-0 md:right-0 md:table-cell text-center">
+                  <button data-action="row-more" data-room="${rIdx}" data-row-id="${row.__rid}" class="p-2 text-slate-400 hover:text-brand hover:bg-blue-50 dark:hover:bg-slate-700 rounded-full transition-colors">${getIcon('MoreHorizontal', 18)}</button>
+                </td>
+              </tr>`;
+          });
+          section.innerHTML = headerHTML + `
+            <div class="overflow-x-auto md:overflow-visible">
+              <table class="w-full text-left border-collapse">
+                <thead class="hidden md:table-header-group">
+                  <tr>
+                    <th class="p-3 text-xs text-slate-400 font-bold uppercase tracking-wider w-[35%]">디바이스</th>
+                    <th class="p-3 text-xs text-slate-400 font-bold uppercase tracking-wider w-[20%]">프로토콜</th>
+                    <th class="p-3 text-xs text-slate-400 font-bold uppercase tracking-wider w-[30%]">자동화</th>
+                    <th class="p-3 text-xs text-slate-400 font-bold uppercase tracking-wider w-[10%] text-center">수량</th>
+                    <th class="p-3 w-[5%]"></th>
+                  </tr>
+                </thead>
+                <tbody class="block md:table-row-group space-y-3 md:space-y-0 px-3 md:px-0 pb-3 md:pb-0">${rowsHtml}</tbody>
+              </table>
+            </div>
+            <div class="md:hidden px-4 pb-4 mt-3">
+              <button data-action="add-row" data-room="${rIdx}" class="w-full py-3 rounded-xl border-2 border-dashed border-brand/30 text-brand dark:text-brand-light font-bold bg-blue-50/50 dark:bg-brand/10 hover:bg-blue-50 dark:hover:bg-brand/20 flex items-center justify-center gap-2">${getIcon('Plus', 18)} 기기 추가</button>
+            </div>`;
+        }
+        container.appendChild(section);
+      });
+    }
+
+    function renderIndicators() {
+      const container = document.getElementById('indicator-area');
+      container.innerHTML = state.rooms.map((room, rIdx) => `
+        <div class="flex flex-col gap-1 items-center">
+          ${room.rows.map(row => `
+            <div class="w-2 h-2 rounded-full transition-all duration-300 ${state.visibleRowIds.has(row.__rid) ? 'bg-brand scale-125 shadow-brand/50 shadow-lg opacity-100' : 'bg-slate-300 dark:bg-slate-600 opacity-40 scale-90'}"></div>
+          `).join('')}
+          ${rIdx < state.rooms.length - 1 && room.rows.length > 0 ? '<div class="h-4 w-[1px] bg-slate-200 dark:bg-slate-700 my-1"></div>' : ''}
+        </div>
+      `).join('');
+    }
+
+    function updateFab() {
+      const fab = document.getElementById('btn-export-mobile');
+      if (fab && !fab.querySelector('svg')) fab.insertAdjacentHTML('afterbegin', getIcon('Camera', 20));
+      const navDev = document.getElementById('mobile-nav-device');
+      const navHelp = document.getElementById('mobile-nav-help');
+      if (navDev && !navDev.querySelector('svg')) navDev.insertAdjacentHTML('afterbegin', getIcon('Smartphone', 24));
+      if (navHelp && !navHelp.querySelector('svg')) navHelp.insertAdjacentHTML('afterbegin', getIcon('HelpCircle', 24));
+    }
+
+    // Event Listeners
+    function setupGlobalDelegation() {
+      document.body.addEventListener('click', (e) => {
+        if(e.target.closest('.ac-item')) return; 
+        if (e.target.tagName === 'INPUT' && e.target.dataset.acType) {
+            showAutocomplete(e.target);
+            return;
+        }
+        const target = e.target.closest('button');
+        if (!target) return;
+        const action = target.dataset.action;
+        if(!action) return;
+        e.stopPropagation();
+
+        if (action === 'select-room') {
+          const idx = Number(target.dataset.idx);
+          state.activeRoomIdx = idx;
+          renderHeader(); 
+          const els = document.querySelectorAll('.room-card');
+          if(els[idx]) {
+             const y = els[idx].getBoundingClientRect().top + window.scrollY - 140;
+             window.scrollTo({ top: y, behavior: 'smooth' });
+          }
+        }
+        else if (action === 'add-room') {
+          state.rooms.push({ name: '새 방', rows: [] });
+          state.activeRoomIdx = state.rooms.length - 1;
+          saveRooms();
+          renderAll();
+          setTimeout(() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' }), 100);
+        }
+        else if (action === 'add-row') {
+          const rIdx = Number(target.dataset.room);
+          state.rooms[rIdx].rows.push({ __rid: Math.random().toString(36).slice(2), device: '', protocol: '', automation: '', qty: 1 });
+          saveRooms(); renderAll(); 
+        }
+        else if (action === 'room-more') openRoomPopover(target, Number(target.dataset.room));
+        else if (action === 'row-more') openRowPopover(target, Number(target.dataset.room), target.dataset.rowId);
+        else if (action === 'qty-inc' || action === 'qty-dec') {
+          const rIdx = Number(target.dataset.room);
+          const rowIdx = Number(target.dataset.row);
+          let val = state.rooms[rIdx].rows[rowIdx].qty;
+          val = action === 'qty-inc' ? Math.min(99, val + 1) : Math.max(1, val - 1);
+          state.rooms[rIdx].rows[rowIdx].qty = val;
+          saveRooms();
+          const input = document.querySelector(`input.qty-input[data-room="${rIdx}"][data-row="${rowIdx}"]`);
+          if(input) input.value = val;
+          renderWidgets(); 
+        }
+        else if (action === 'device-modal') openDeviceModal(Number(target.dataset.room), Number(target.dataset.row));
+        else if (action === 'preset-modal') openPresetModal(Number(target.dataset.room));
+      });
+
+      document.body.addEventListener('input', (e) => {
+        if (e.target.dataset.field === 'room-name') {
+          const idx = Number(e.target.dataset.room);
+          state.rooms[idx].name = e.target.value;
+          saveRooms();
+          document.querySelectorAll(`button[data-action="select-room"][data-idx="${idx}"]`).forEach(b => b.innerText = e.target.value || '이름없음');
+        }
+        else if (e.target.dataset.field) {
+          const rIdx = Number(e.target.dataset.room);
+          const rowIdx = Number(e.target.dataset.row);
+          const field = e.target.dataset.field;
+          state.rooms[rIdx].rows[rowIdx][field] = e.target.value;
+          saveRooms();
+          if (field === 'device') {
+            renderWidgets();
+          }
+          if (e.target.dataset.acType) showAutocomplete(e.target);
+        }
+        else if (e.target.classList.contains('qty-input')) {
+           const rIdx = Number(e.target.dataset.room);
+           const rowIdx = Number(e.target.dataset.row);
+           let val = parseInt(e.target.value) || 1;
+           if(val < 1) val = 1; if(val > 99) val = 99;
+           state.rooms[rIdx].rows[rowIdx].qty = val;
+           saveRooms(); renderWidgets();
+        }
+      });
+    }
+
+    function showAutocomplete(input) {
+      const type = input.dataset.acType;
+      const val = input.value.toLowerCase().trim();
+      let candidates = [];
+      if (type === 'device') candidates = DEVICE_CATEGORIES.flatMap(c => DEVICE_PROFILE[c]);
+      else if (type === 'protocol') candidates = PROTOCOLS;
+      else if (type === 'automation') candidates = AUTOMATIONS;
+
+      const filtered = val ? candidates.filter(c => c.toLowerCase().includes(val)) : candidates.slice(0, 50);
+      const root = document.getElementById('autocomplete-root');
+      if (filtered.length === 0) { root.innerHTML = ''; return; }
+
+      const rect = input.getBoundingClientRect();
+      root.innerHTML = `
+        <div class="fixed bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 shadow-xl rounded-xl z-[9999] max-h-60 overflow-auto flex flex-col"
+             style="top: ${rect.bottom + window.scrollY + 4}px; left: ${rect.left + window.scrollX}px; width: ${Math.max(rect.width, 220)}px;">
+           ${filtered.map(item => {
+              const regex = new RegExp(`(${val})`, 'gi');
+              const label = val ? item.replace(regex, '<mark class="bg-brand-light/30 text-brand-dark dark:text-brand-light rounded px-0.5">$1</mark>') : item;
+              return `<div class="ac-item px-4 py-2 hover:bg-slate-50 dark:hover:bg-slate-700 cursor-pointer text-sm text-slate-700 dark:text-slate-200" data-val="${item}">${label}</div>`;
+           }).join('')}
+        </div>`;
+
+      const handler = (e) => {
+        const target = e.target.closest('.ac-item');
+        if (target) {
+          input.value = target.dataset.val;
+          input.dispatchEvent(new Event('input', { bubbles: true })); 
+          root.innerHTML = '';
+          document.removeEventListener('mousedown', outsideClick);
+        }
+      };
+      const outsideClick = (e) => {
+         if (!root.contains(e.target) && e.target !== input) {
+           root.innerHTML = '';
+           document.removeEventListener('mousedown', outsideClick);
+         }
+      };
+      root.onclick = handler;
+      setTimeout(() => document.addEventListener('mousedown', outsideClick), 0);
+    }
+
+    function setupDragScroll(ele) {
+      if(!ele) return;
+      let pos = { top: 0, left: 0, x: 0, y: 0 };
+      let isDown = false;
+      ele.addEventListener('mousedown', (e) => {
+        isDown = true; pos = { left: ele.scrollLeft, x: e.clientX };
+        ele.style.cursor = 'grabbing'; ele.style.userSelect = 'none';
+      });
+      document.addEventListener('mousemove', (e) => {
+        if(!isDown) return;
+        const dx = e.clientX - pos.x; ele.scrollLeft = pos.left - dx;
+      });
+      document.addEventListener('mouseup', () => {
+        isDown = false; ele.style.cursor = 'grab'; ele.style.removeProperty('user-select');
+      });
+    }
+
+    function openModal(contentHTML, title, backCallback = null) {
+      const root = document.getElementById('modal-root');
+      root.innerHTML = `
+        <div class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm" id="modal-backdrop">
+          <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-3xl max-h-[85vh] flex flex-col overflow-hidden animate-in fade-in zoom-in duration-200 border border-slate-100 dark:border-slate-800">
+            <div class="flex items-center justify-between p-4 border-b border-slate-100 dark:border-slate-800 shrink-0 bg-white dark:bg-slate-900">
+              <div class="flex items-center gap-2">
+                ${backCallback ? `<button id="modal-back" class="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full dark:text-slate-100">${getIcon('ArrowLeft', 20)}</button>` : ''}
+                <h3 class="font-bold text-lg text-slate-800 dark:text-white">${title}</h3>
+              </div>
+              <button id="modal-close" class="p-1 text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800 dark:hover:text-slate-200 rounded-full">${getIcon('X', 20)}</button>
+            </div>
+            <div class="overflow-auto p-0 flex-1">${contentHTML}</div>
+          </div>
+        </div>`;
+      document.getElementById('modal-close').onclick = () => root.innerHTML = '';
+      document.getElementById('modal-backdrop').onclick = (e) => { if(e.target === e.currentTarget) root.innerHTML = ''; };
+      if(backCallback) document.getElementById('modal-back').onclick = backCallback;
+    }
+
+    function openDeviceModal(rIdx, rowIdx) {
+      const cats = DEVICE_CATEGORIES;
+      const html = `
+        <div class="flex flex-col h-full">
+          <div class="sticky top-0 z-10 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm border-b border-slate-100 dark:border-slate-800 px-2 py-3">
+            <div id="device-cat-tabs" class="flex gap-2 overflow-x-auto no-scrollbar pb-1 mask-linear-sides cursor-grab select-none">
+              ${cats.map((c, i) => `<button class="px-4 py-1.5 rounded-full text-sm font-bold whitespace-nowrap transition-all ${i === 0 ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-md' : 'text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'}" data-cat="${c}">${c}</button>`).join('')}
+            </div>
+          </div>
+          <div id="device-grid" class="p-4 overflow-y-auto flex-1 bg-slate-50 dark:bg-slate-950/50">
+            ${cats.map(cat => `
+              <div id="cat-section-${cat}" class="mb-8 scroll-mt-4">
+                <h4 class="text-sm font-bold text-slate-400 mb-3 uppercase tracking-wider">${cat}</h4>
+                <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 gap-3">
+                  ${(DEVICE_PROFILE[cat] || []).map(dev => {
+                    const filename = DEVICE_ICON_MAP[dev] || 'other';
+                    const imgSrc = `images/icons/deviceprofiles/${filename}.png`;
+                    const webpSrc = `images/icons/deviceprofiles/${filename}.webp`;
+                    return `
+                    <div class="bg-white dark:bg-slate-800 p-3 rounded-xl border border-slate-100 dark:border-slate-700 shadow-sm hover:shadow-md hover:border-brand/30 dark:hover:border-brand/50 cursor-pointer flex flex-col items-center gap-3 transition-all active:scale-95" data-device="${dev}">
+                      <div class="w-14 h-14 rounded-2xl bg-gradient-to-b from-blue-50 to-blue-100 dark:from-slate-700 dark:to-slate-600 flex items-center justify-center text-2xl shadow-inner border border-blue-100 dark:border-slate-600 overflow-hidden p-1">
+                        <img src="${imgSrc}" onerror="this.src='${webpSrc}';this.onerror=()=>{this.parentElement.innerText='🔘'}" class="w-full h-full object-contain">
+                      </div>
+                      <span class="text-xs font-medium text-slate-700 dark:text-slate-300 text-center line-clamp-2 leading-tight">${dev}</span>
+                    </div>`;
+                  }).join('')}
+                </div>
+              </div>`).join('')}
+          </div>
+        </div>`;
+      openModal(html, '디바이스 선택');
+      setupDragScroll(document.getElementById('device-cat-tabs'));
+      document.getElementById('device-grid').onclick = (e) => {
+        const card = e.target.closest('[data-device]');
+        if(card) {
+          state.rooms[rIdx].rows[rowIdx].device = card.dataset.device;
+          saveRooms(); renderAll(); 
+          document.getElementById('modal-root').innerHTML = '';
+        }
+      };
+      document.getElementById('device-cat-tabs').onclick = (e) => {
+        const target = e.target.closest('[data-cat]');
+        if(target) {
+          const cat = target.dataset.cat;
+          document.getElementById(`cat-section-${cat}`).scrollIntoView({behavior:'smooth', block:'start'});
+          const tabs = document.getElementById('device-cat-tabs');
+          Array.from(tabs.children).forEach(b => b.className = "px-4 py-1.5 rounded-full text-sm font-bold whitespace-nowrap transition-all text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800");
+          target.className = "px-4 py-1.5 rounded-full text-sm font-bold whitespace-nowrap transition-all bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-md";
+        }
+      };
+    }
+
+    function openPresetModal(rIdx) {
+      const html = `
+        <div class="divide-y divide-slate-100 dark:divide-slate-800">
+          ${DEFAULT_PRESETS.map((p, i) => `
+            <div class="p-4 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-800/50 group">
+              <div>
+                <div class="font-bold text-slate-800 dark:text-slate-200 mb-1 flex items-center gap-2">${getIcon('Box', 16, 'text-brand')} ${p.name}</div>
+                <div class="text-xs text-slate-500 dark:text-slate-400">${p.device} · ${p.protocol} · ${p.automation}</div>
+              </div>
+              <button data-preset-idx="${i}" class="px-4 py-2 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-full text-sm font-bold hover:bg-brand hover:text-white dark:hover:bg-brand dark:hover:text-white transition-colors">추가</button>
+            </div>`).join('')}
+        </div>`;
+      openModal(html, '프리셋 추가');
+      document.getElementById('modal-root').onclick = (e) => {
+        const target = e.target.closest('[data-preset-idx]');
+        if(target) {
+          const p = DEFAULT_PRESETS[target.dataset.presetIdx];
+          state.rooms[rIdx].rows.push({ ...p, __rid: Math.random().toString(36).slice(2) });
+          saveRooms(); renderAll();
+          document.getElementById('modal-root').innerHTML = '';
+        }
+      };
+    }
+
+    function openHelpModal() {
+      const html = `
+        <div class="p-6 space-y-4 text-slate-700 dark:text-slate-300 leading-relaxed">
+          <p><strong>ShoppingThings</strong>는 스마트홈 기기 목록을 쉽게 관리하고 공유할 수 있는 도구입니다.</p>
+          <ul class="list-disc pl-5 space-y-2">
+            <li><strong>방 관리:</strong> 상단의 탭이나 + 버튼으로 방을 추가하고 이름을 변경할 수 있습니다.</li>
+            <li><strong>기기 추가:</strong> 각 방에서 '기기 추가' 버튼을 누르거나, 직접 입력하여 기기를 추가하세요.</li>
+            <li><strong>자동완성:</strong> 디바이스 이름, 프로토콜, 자동화 입력 시 추천 목록이 나타납니다.</li>
+            <li><strong>이미지 저장:</strong> 우측 상단(모바일은 우측 하단)의 카메라 아이콘을 눌러 현재 목록을 PNG 이미지로 저장할 수 있습니다.</li>
+            <li><strong>데이터 저장:</strong> 모든 데이터는 브라우저에 자동 저장됩니다.</li>
+          </ul>
+        </div>`;
+      openModal(html, '도움말');
+    }
+
+    function openPopover(anchor, html) {
+      const root = document.getElementById('popover-root');
+      const rect = anchor.getBoundingClientRect();
+      root.innerHTML = `
+        <div class="fixed inset-0 z-[60]" id="popover-backdrop"></div>
+        <div class="fixed z-[70] bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-100 dark:border-slate-700 p-1 flex flex-col min-w-[160px] animate-in fade-in zoom-in-95 duration-100"
+             style="top: ${Math.min(window.innerHeight - 200, rect.bottom + 8)}px; left: ${Math.min(window.innerWidth - 180, Math.max(10, rect.left - 100))}px;">
+           ${html}
+        </div>`;
+      document.getElementById('popover-backdrop').onclick = () => root.innerHTML = '';
+      return root.querySelector('div.fixed.z-\\[70\\]');
+    }
+
+    function openGnbPopover(anchor) {
+      const html = `
+        <button id="act-reset" class="flex items-center gap-2 px-3 py-2 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-lg text-sm text-slate-700 dark:text-slate-200 font-medium text-left">${getIcon('RotateCcw', 16)} 초기화</button>
+        <button id="act-theme" class="flex items-center gap-2 px-3 py-2 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-lg text-sm text-slate-700 dark:text-slate-200 font-medium text-left">${getIcon('Moon', 16)} ${state.theme === 'dark' ? '라이트 모드' : '다크 모드'}</button>`;
+      openPopover(anchor, html);
+      document.getElementById('act-reset').onclick = () => { if(confirm('초기화?')) { localStorage.clear(); location.reload(); } };
+      document.getElementById('act-theme').onclick = () => {
+        state.theme = state.theme === 'light' ? 'dark' : 'light';
+        saveTheme(state.theme); applyTheme();
+        document.getElementById('popover-root').innerHTML = '';
+      };
+    }
+
+    function openRoomPopover(anchor, rIdx) {
+      const html = `
+        <button data-a="preset" class="flex items-center gap-2 px-3 py-2 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-lg text-sm text-slate-700 dark:text-slate-200 font-medium text-left">${getIcon('Box', 16)} 프리셋 추가</button>
+        <button data-a="clear" class="flex items-center gap-2 px-3 py-2 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-lg text-sm text-slate-700 dark:text-slate-200 font-medium text-left">${getIcon('RotateCcw', 16)} 방 비우기</button>
+        <div class="h-[1px] bg-slate-100 dark:bg-slate-700 my-1"></div>
+        <button data-a="remove" class="flex items-center gap-2 px-3 py-2 hover:bg-red-50 dark:hover:bg-red-900/20 text-red-500 rounded-lg text-sm font-medium text-left">${getIcon('Trash2', 16)} 방 삭제</button>`;
+      const el = openPopover(anchor, html);
+      el.onclick = (e) => {
+        const act = e.target.closest('button')?.dataset.a;
+        if(act === 'clear' && confirm('비우시겠습니까?')) { state.rooms[rIdx].rows = []; saveRooms(); renderAll(); }
+        else if(act === 'remove' && confirm('삭제하시겠습니까?')) { state.rooms.splice(rIdx, 1); saveRooms(); renderAll(); }
+        else if(act === 'preset') { openPresetModal(rIdx); }
+        document.getElementById('popover-root').innerHTML = '';
+      };
+    }
+
+    function openRowPopover(anchor, rIdx, rowId) {
+      const rowIdx = state.rooms[rIdx].rows.findIndex(r => r.__rid === rowId);
+      const html = `
+        <button data-a="move" class="flex items-center gap-2 px-3 py-2 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-lg text-sm text-slate-700 dark:text-slate-200 font-medium text-left">${getIcon('LogOut', 16)} 방 옮기기</button>
+        <button data-a="up" class="flex items-center gap-2 px-3 py-2 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-lg text-sm text-slate-700 dark:text-slate-200 font-medium text-left">${getIcon('ArrowUp', 16)} 위로</button>
+        <button data-a="down" class="flex items-center gap-2 px-3 py-2 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-lg text-sm text-slate-700 dark:text-slate-200 font-medium text-left">${getIcon('ArrowDown', 16)} 아래로</button>
+        <div class="h-[1px] bg-slate-100 dark:bg-slate-700 my-1"></div>
+        <button data-a="dup" class="flex items-center gap-2 px-3 py-2 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-lg text-sm text-slate-700 dark:text-slate-200 font-medium text-left">${getIcon('Copy', 16)} 복제</button>
+        <button data-a="del" class="flex items-center gap-2 px-3 py-2 hover:bg-red-50 dark:hover:bg-red-900/20 text-red-500 rounded-lg text-sm font-medium text-left">${getIcon('Trash2', 16)} 삭제</button>`;
+      const el = openPopover(anchor, html);
+      el.onclick = (e) => {
+        const act = e.target.closest('button')?.dataset.a;
+        const rows = state.rooms[rIdx].rows;
+        if(act === 'del') rows.splice(rowIdx, 1);
+        else if(act === 'dup') rows.splice(rowIdx+1, 0, {...rows[rowIdx], __rid: Math.random().toString(36).slice(2)});
+        else if(act === 'up' && rowIdx > 0) { const [it] = rows.splice(rowIdx, 1); rows.splice(rowIdx-1, 0, it); }
+        else if(act === 'down' && rowIdx < rows.length-1) { const [it] = rows.splice(rowIdx, 1); rows.splice(rowIdx+1, 0, it); }
+        else if(act === 'move') {
+          const htmlMove = state.rooms.map((r, i) => `<label class="flex items-center gap-3 p-4 rounded-xl hover:bg-blue-50 dark:hover:bg-slate-800 cursor-pointer"><input type="radio" name="troom" value="${i}" ${i===rIdx?'disabled':''}> ${r.name}</label>`).join('');
+          openModal(htmlMove, '방 옮기기');
+          const modalRoot = document.getElementById('modal-root');
+          modalRoot.onchange = (ev) => {
+            if(ev.target.name === 'troom') {
+               const targetIdx = Number(ev.target.value);
+               const [it] = state.rooms[rIdx].rows.splice(rowIdx, 1);
+               state.rooms[targetIdx].rows.push(it);
+               saveRooms(); renderAll(); modalRoot.innerHTML = '';
+            }
+          };
+        }
+        if(act !== 'move') { saveRooms(); renderAll(); }
+        document.getElementById('popover-root').innerHTML = '';
+      };
+    }
+
+    function setupIndicatorObserver() {
+      const handleScroll = () => {
+        const rows = document.querySelectorAll('tr[data-row-id]');
+        const newVisible = new Set();
+        const viewTop = window.scrollY;
+        const viewBottom = viewTop + window.innerHeight;
+        rows.forEach(row => {
+          const rect = row.getBoundingClientRect();
+          const top = rect.top + window.scrollY;
+          const bottom = rect.bottom + window.scrollY;
+          if (bottom > viewTop + 100 && top < viewBottom - 100) newVisible.add(row.dataset.rowId);
+        });
+        if(newVisible.size !== state.visibleRowIds.size || [...newVisible].some(x => !state.visibleRowIds.has(x))) {
+           state.visibleRowIds = newVisible; renderIndicators();
+        }
+      };
+      window.addEventListener('scroll', handleScroll, { passive: true });
+    }
+
+    const exportToPNG = async () => {
+      if (!window.html2canvas) return alert('Library not loaded');
+      const noPrints = document.querySelectorAll('.no-print-target');
+      noPrints.forEach(el => el.classList.add('no-print'));
+      const tile = document.createElement('div');
+      Object.assign(tile.style, { position: 'absolute', left: '0', top: '0', width: document.documentElement.scrollWidth+'px', height: document.documentElement.scrollHeight+'px', pointerEvents: 'none', zIndex: '99999', display: 'flex', flexWrap: 'wrap', overflow: 'hidden' });
+      for(let i=0; i<200; i++) {
+        const t = document.createElement('div');
+        t.textContent = 'Shopping Things';
+        Object.assign(t.style, { opacity: '0.03', fontSize: '36px', transform: 'rotate(-12deg)', margin: '8px', fontFamily: 'sans-serif', fontWeight: 'bold' });
+        tile.appendChild(t);
+      }
+      document.body.appendChild(tile);
+      const inputs = document.querySelectorAll('input');
+      const overlays = [];
+      inputs.forEach(el => {
+        const rect = el.getBoundingClientRect();
+        if(rect.width === 0) return;
+        const span = document.createElement('div');
+        span.textContent = el.value;
+        const style = window.getComputedStyle(el);
+        Object.assign(span.style, {
+           position: 'absolute', left: (rect.left+window.scrollX)+'px', top: (rect.top+window.scrollY)+'px', width: rect.width+'px', height: rect.height+'px',
+           zIndex: '99999', background: 'transparent', fontSize: style.fontSize, fontWeight: style.fontWeight, fontFamily: style.fontFamily,
+           textAlign: style.textAlign, padding: style.padding, lineHeight: style.lineHeight, color: style.color, display: 'flex', alignItems: 'center', justifyContent: el.classList.contains('text-center')?'center':'flex-start'
+        });
+        document.body.appendChild(span);
+        overlays.push({el, span});
+        el.style.visibility = 'hidden';
+      });
+      try {
+        const canvas = await html2canvas(document.documentElement, { scale: 2, backgroundColor: null, useCORS: true, allowTaint: true, ignoreElements: (el) => el.classList.contains('no-print') });
+        const link = document.createElement('a');
+        link.href = canvas.toDataURL('image/png');
+        link.download = 'shoppingthings.png';
+        link.click();
+      } catch(e) { console.error(e); alert('Export failed'); }
+      finally {
+        overlays.forEach(o => { o.el.style.visibility = ''; o.span.remove(); });
+        tile.remove();
+        noPrints.forEach(el => el.classList.remove('no-print'));
+      }
+    };
+
+    // BOOTSTRAP
+    document.addEventListener('DOMContentLoaded', init);
+  </script>
+</body>
+</html>
