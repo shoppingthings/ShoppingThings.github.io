@@ -2015,9 +2015,12 @@
       const btnMob = document.getElementById('btn-export-mobile');
       const btnPc = document.getElementById('btn-footer-png');
       
+      const isSamsung = /SamsungBrowser/i.test(navigator.userAgent);
+      const loadingText = isSamsung ? '캡처중(자동 다운로드 차단을 끄세요)' : '캡처중...';
+      
       // Feedback UI with preserved icon and styling
-      if(btnMob) btnMob.innerHTML = `${getIcon('Camera', 20)} <span class="font-bold text-sm">캡처중...</span>`;
-      if(btnPc) btnPc.innerText = '캡처중...';
+      if(btnMob) btnMob.innerHTML = `${getIcon('Camera', 20)} <span class="font-bold text-sm ${isSamsung ? 'text-xs' : ''}">${loadingText}</span>`;
+      if(btnPc) btnPc.innerText = loadingText;
 
       const scrollX = window.scrollX;
       const scrollY = window.scrollY;
@@ -2098,8 +2101,7 @@
         const height = node.scrollHeight;
         
         const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-        const isSamsung = /SamsungBrowser/i.test(navigator.userAgent);
-
+        
         // Samsung Internet Specific Config
         const config = {
            width: width,
