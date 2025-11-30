@@ -2086,7 +2086,7 @@
       const originalText = btn.innerHTML;
       const isSamsung = navigator.userAgent.match(/SamsungBrowser/i);
       
-      btn.innerHTML = `${getIcon('Camera', 20, 'animate-pulse')} <span class="font-bold text-xs">캡처중... ${isSamsung ? '<br>(자동 다운로드 차단을 끄세요)' : ''}</span>`;
+      btn.innerHTML = `${getIcon('Camera', 20, 'animate-pulse')} <span class="font-bold text-xs">캡처중... ${isSamsung ? '(자동 다운로드 차단을 끄세요)' : ''}</span>`;
       
       // Temporary Style Adjustments
       const noPrints = document.querySelectorAll('.no-print-target');
