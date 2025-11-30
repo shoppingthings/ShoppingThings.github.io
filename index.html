@@ -2141,7 +2141,7 @@
                 cacheBust: true,
                 filter: (node) => !node.classList?.contains('no-print-target')
             });
-            downloadBlob(blob, `shoppingthings_${dateStr}.png`);
+            downloadBlob(blob, `iot_shoppinglist_${dateStr}_shoppingthings.png`);
         } catch(err) {
             console.warn('High quality capture failed, retrying with lower settings...', err);
             // Attempt 2: Low Quality Fallback
@@ -2152,7 +2152,7 @@
                 cacheBust: true,
                 filter: (node) => !node.classList?.contains('no-print-target')
             });
-            downloadBlob(blob, `shoppingthings_${dateStr}_low.png`);
+            downloadBlob(blob, `iot_shoppinglist_${dateStr}_optimized_shoppingthings.png`);
         }
       } catch(e) { 
         console.error(e); 
