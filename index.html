@@ -2016,7 +2016,7 @@
       const btnPc = document.getElementById('btn-footer-png');
       
       const isSamsung = /SamsungBrowser/i.test(navigator.userAgent);
-      const loadingText = isSamsung ? '캡처중(자동 다운로드 차단을 끄세요)' : '캡처중...';
+      const loadingText = isSamsung ? '캡처중... (다운로드 차단 확인)' : '캡처중...';
       
       // Feedback UI with preserved icon and styling
       if(btnMob) btnMob.innerHTML = `${getIcon('Camera', 20)} <span class="font-bold text-sm ${isSamsung ? 'text-xs' : ''}">${loadingText}</span>`;
