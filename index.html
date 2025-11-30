@@ -1563,7 +1563,7 @@
             const webpSrc = `images/icons/deviceprofiles/${filename}.webp`;
 
             const slimRowHtml = isSlim ? `
-              <div class="md:hidden flex items-center gap-3 p-3 bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl shadow-sm active:scale-95 transition-all cursor-pointer" data-action="unslim-row" data-room="${rIdx}" data-row="${rowIdx}">
+              <div class="md:hidden flex items-center gap-3 p-2 bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-full shadow-sm active:scale-95 transition-all cursor-pointer" data-action="unslim-row" data-room="${rIdx}" data-row="${rowIdx}">
                 <div class="w-12 h-12 rounded-full bg-blue-50 dark:bg-slate-700 flex items-center justify-center shrink-0 border border-blue-100 dark:border-slate-600 overflow-hidden p-1">
                    <img src="${imgSrc}" onerror="this.src='${webpSrc}';this.onerror=()=>{this.parentElement.innerText='🔘'}" class="w-full h-full object-contain">
                 </div>
@@ -1629,7 +1629,7 @@
               </tr>`;
           });
           section.innerHTML = headerHTML + `
-            <div class="overflow-x-auto md:overflow-visible">
+            <div class="overflow-x-auto md:overflow-visible p-3 space-y-1">
               <table class="w-full text-left border-collapse">
                 <thead class="hidden md:table-header-group">
                   <tr>
@@ -1639,7 +1639,7 @@
                     <th class="p-3 w-[5%]"></th>
                   </tr>
                 </thead>
-                <tbody class="block md:table-row-group space-y-3 md:space-y-0 px-3 md:px-0 pb-3 md:pb-0">${rowsHtml}</tbody>
+                <tbody class="block md:table-row-group space-y-3 md:space-y-0 md:px-0 pb-3 md:pb-0">${rowsHtml}</tbody>
               </table>
             </div>
             <div class="md:hidden px-4 pb-4 mt-3">
