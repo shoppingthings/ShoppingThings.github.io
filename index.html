@@ -248,6 +248,7 @@
       overflow-x: auto;
       -webkit-overflow-scrolling: touch;
       scroll-snap-type: x proximity;
+      scroll-behavior: smooth;
       padding-top: 20px;
       padding-bottom: 40px;
       scroll-padding-inline: 50px;
@@ -2089,7 +2090,17 @@
       
       // Temporary Style Adjustments
       const noPrints = document.querySelectorAll('.no-print-target');
-      noPrints.forEach(el => el.style.display = 'none');
+      // Hide all no-print targets EXCEPT the export buttons if they exist in that list (though user said Keep FAB)
+      // The filter function below is the primary way we exclude/include. 
+      // But we still hide them from DOM to clean up layout shifts if needed? 
+      // Actually, hiding them from DOM removes them from image too. 
+      // So we must NOT hide the FABs if we want them in image.
+      noPrints.forEach(el => {
+          if (el.id !== 'btn-export-mobile' && el.id !== 'btn-tuto-mobile') {
+              el.style.display = 'none';
+          }
+      });
+
       document.body.classList.add('no-scrollbar');
       
       // Disable Backdrop Filter for Mobile Stability
@@ -2115,23 +2126,36 @@
         el.style.visibility = 'hidden';
       });
 
-      // Add Watermark
-      const watermark = document.createElement('div');
-      watermark.innerHTML = `<div style="position:fixed; bottom:20px; right:20px; font-family:'SamsungSharpSans'; font-weight:bold; font-size:24px; color:rgba(0,0,0,0.1); transform:rotate(-5deg); z-index:99999; pointer-events:none;">ShoppingThings</div>`;
-      document.body.appendChild(watermark);
+      // Add Tiled Watermark
+      const tile = document.createElement('div');
+      Object.assign(tile.style, { position: 'absolute', left: '0', top: '0', width: document.documentElement.scrollWidth+'px', height: document.documentElement.scrollHeight+'px', pointerEvents: 'none', zIndex: '99998', display: 'flex', flexWrap: 'wrap', overflow: 'hidden' });
+      
+      for(let i=0; i<200; i++) {
+        const t = document.createElement('div');
+        t.textContent = 'ShoppingThings';
+        Object.assign(t.style, { opacity: '0.01', fontSize: '36px', transform: 'rotate(-12deg)', margin: '8px', fontFamily: 'SamsungSharpSans', fontWeight: 'bold' });
+        tile.appendChild(t);
+      }
+      document.body.appendChild(tile);
 
       const cleanup = () => {
          noPrints.forEach(el => el.style.removeProperty('display'));
          document.body.classList.remove('no-scrollbar');
          glassEls.forEach(el => el.style.removeProperty('backdrop-filter'));
          overlays.forEach(o => { o.el.style.visibility = ''; o.span.remove(); });
-         watermark.remove();
+         tile.remove();
          btn.innerHTML = originalText;
       };
 
       try {
         const dateStr = new Date().toISOString().slice(0,10).replace(/-/g,'');
         
+        // Filter function: Returns true if node should be included
+        const filterNode = (node) => {
+           if (node.id === 'btn-export-mobile' || node.id === 'btn-tuto-mobile') return true;
+           return !node.classList?.contains('no-print-target');
+        };
+
         // Attempt 1: High Quality
         try {
             const blob = await htmlToImage.toBlob(document.body, { 
@@ -2139,7 +2163,7 @@
                 backgroundColor: state.theme === 'dark' ? '#0f172a' : '#f8fafc',
                 skipAutoScale: true,
                 cacheBust: true,
-                filter: (node) => !node.classList?.contains('no-print-target')
+                filter: filterNode
             });
             downloadBlob(blob, `iot_shoppinglist_${dateStr}_shoppingthings.png`);
         } catch(err) {
@@ -2150,7 +2174,7 @@
                 backgroundColor: state.theme === 'dark' ? '#0f172a' : '#f8fafc',
                 skipAutoScale: true,
                 cacheBust: true,
-                filter: (node) => !node.classList?.contains('no-print-target')
+                filter: filterNode
             });
             downloadBlob(blob, `iot_shoppinglist_${dateStr}_optimized_shoppingthings.png`);
         }
