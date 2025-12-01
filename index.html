@@ -60,6 +60,7 @@
 
   <!-- Custom Styles -->
   <style>
+    
     /* disable horizontal scroll*/
     html{
       max-width : 100%;
@@ -2140,63 +2141,167 @@
       setTimeout(() => document.addEventListener('mousedown', outsideClick), 0);
     }
 
+    /* Smooth drag + inertia + multi-item snap for horizontal containers
+   Usage: setupDragScroll(containerElement)
+   Will compute snap positions (centers of children + edges)
+    */
     function setupDragScroll(ele) {
-      if(!ele || ele.dataset.dragScrollInit) return;
-      ele.dataset.dragScrollInit = "true";
-      
-      let pos = { left: 0, x: 0 };
-      let isDown = false;
-      let isDragging = false;
-      let startX = 0;
+      if (!ele || ele.__st_drag_init) return;
+      ele.__st_drag_init = true;
 
-      const onMouseDown = (e) => {
+      // 1. 기존 CSS 스냅 및 스무스 동작 제거 (JS 물리 엔진 적용을 위해 필수)
+      ele.style.scrollSnapType = 'none';
+      ele.style.scrollBehavior = 'auto';
+      ele.style.cursor = 'grab';
+
+      // 상태 변수
+      let isDown = false;
+      let startX;
+      let scrollLeft;
+      let velX = 0;       // 현재 속도
+      let lastX = 0;      // 속도 계산용 이전 위치
+      let lastTime = 0;   // 속도 계산용 시간
+      let momentumID;     // 관성 애니메이션 프레임 ID
+      let isDragging = false; // 단순 클릭인지 드래그인지 판별
+
+      // 관성 루프 (Physics Loop)
+      const momentumLoop = () => {
+        // 마찰력 적용 (0.95: 빙판길 ~ 0.85: 흙길)
+        velX *= 0.95;
+
+        // 속도가 거의 0이면 정지
+        if (Math.abs(velX) < 0.5) {
+          cancelAnimationFrame(momentumID);
+          return;
+        }
+
+        // 스크롤 적용
+        ele.scrollLeft -= velX;
+
+        // 바운더리 체크 (스크롤 끝에 도달하면 속도 0)
+        if (ele.scrollLeft <= 0 || ele.scrollLeft >= ele.scrollWidth - ele.clientWidth) {
+          velX = 0;
+          cancelAnimationFrame(momentumID);
+          return;
+        }
+
+        momentumID = requestAnimationFrame(momentumLoop);
+      };
+
+      // 공통 이벤트 핸들러 (마우스/터치 좌표 추출)
+      const getPageX = (e) => {
+        return e.touches ? e.touches[0].pageX : e.pageX;
+      };
+
+      const onDown = (e) => {
         isDown = true;
         isDragging = false;
-        startX = e.clientX;
-        pos = { left: ele.scrollLeft, x: e.clientX };
-        
         ele.style.cursor = 'grabbing';
-        ele.style.userSelect = 'none';
-        ele.style.scrollSnapType = 'none'; 
-        
-        document.addEventListener('mousemove', onMouseMove);
-        document.addEventListener('mouseup', onMouseUp);
-      };
+        ele.classList.add('st-dragging');
 
-      const onMouseMove = (e) => {
-        if(!isDown) return;
-        e.preventDefault();
-        const dx = e.clientX - pos.x;
-        ele.scrollLeft = pos.left - dx;
-        
-        if(Math.abs(e.clientX - startX) > 5) {
-            isDragging = true;
+        // 기존 관성 멈춤
+        cancelAnimationFrame(momentumID);
+
+        // 초기값 설정
+        const pageX = getPageX(e);
+        startX = pageX - ele.offsetLeft;
+        scrollLeft = ele.scrollLeft;
+
+        // 속도 계산 초기화
+        lastX = pageX;
+        lastTime = performance.now();
+        velX = 0;
+
+        // 이미지나 텍스트 드래그 방지
+        if (!e.touches) {
+          e.preventDefault(); 
         }
       };
 
-      const onMouseUp = (e) => {
+      const onMove = (e) => {
+        if (!isDown) return;
+        if (e.touches) { 
+           // 터치 시 세로 스크롤 의도가 강하면 가로 드래그 무시 (모바일 UX)
+           // 필요하다면 e.preventDefault()를 호출하여 가로 전용으로 만들 수 있음
+        } else {
+           e.preventDefault(); 
+        }
+
+        const pageX = getPageX(e);
+        const x = pageX - ele.offsetLeft;
+        const walk = (x - startX); // 이동 거리
+
+        // 5px 이상 움직이면 드래그로 간주 (클릭 방지용)
+        if (Math.abs(walk) > 5) {
+          isDragging = true;
+        }
+
+        // 스크롤 이동
+        ele.scrollLeft = scrollLeft - walk;
+
+        // 속도 계산
+        const now = performance.now();
+        const dt = now - lastTime;
+        const dx = pageX - lastX;
+
+        if (dt > 0) {
+          // 순간 속도 계산 (가중치 0.8을 두어 급격한 변화 보정)
+          const newVel = (dx / dt) * 16; // 60fps 기준 보정
+          velX = newVel * 0.8 + velX * 0.2;
+        }
+
+        lastX = pageX;
+        lastTime = now;
+      };
+
+      const onUp = (e) => {
         isDown = false;
         ele.style.cursor = 'grab';
-        ele.style.removeProperty('user-select');
-        ele.style.removeProperty('scroll-snap-type'); 
-        
-        document.removeEventListener('mousemove', onMouseMove);
-        document.removeEventListener('mouseup', onMouseUp);
-        
+        ele.classList.remove('st-dragging');
+
         if (isDragging) {
-           const preventClick = (ev) => {
-             ev.preventDefault();
-             ev.stopPropagation();
-             window.removeEventListener('click', preventClick, true);
-           };
-           window.addEventListener('click', preventClick, true);
+          // 드래그 상태였다면 관성 실행
+          momentumLoop();
+
+          // 드래그 후 클릭 이벤트 발생 방지 (캡처링 단계에서 중단)
+          const preventClick = (ev) => {
+            ev.stopPropagation();
+            ev.preventDefault();
+            window.removeEventListener('click', preventClick, true);
+          };
+          window.addEventListener('click', preventClick, true);
         }
       };
 
-      ele.addEventListener('mousedown', onMouseDown);
-      ele.style.cursor = 'grab';
-    }
+      const onLeave = () => {
+        if (isDown) onUp();
+      };
 
+      // 휠 이벤트: 세로 휠을 가로 스크롤로 변환 (스냅 없음)
+      const onWheel = (e) => {
+        // 세로 스크롤이 주된 입력일 때만 변환
+        if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+          e.preventDefault();
+          // 휠은 관성 없이 즉각 반응하거나, 필요 시 부드럽게 처리 가능
+          // 여기서는 기본 스크롤 동작을 따르되 가로로 맵핑
+          ele.scrollLeft += e.deltaY;
+        }
+      };
+
+      // 이벤트 리스너 등록
+      ele.addEventListener('mousedown', onDown);
+      ele.addEventListener('mousemove', onMove);
+      ele.addEventListener('mouseup', onUp);
+      ele.addEventListener('mouseleave', onLeave);
+
+      ele.addEventListener('touchstart', onDown, { passive: true }); // passive: true로 스크롤 성능 최적화
+      ele.addEventListener('touchmove', onMove, { passive: false }); // preventDefault 사용 가능하도록 false
+      ele.addEventListener('touchend', onUp);
+
+      ele.addEventListener('wheel', onWheel, { passive: false });
+    }
+    
+    
     function openModal(contentHTML, title, backCallback = null) {
       const root = document.getElementById('modal-root');
       root.innerHTML = `
@@ -2216,6 +2321,39 @@
       document.getElementById('modal-backdrop').onclick = (e) => { if(e.target === e.currentTarget) root.innerHTML = ''; };
       if(backCallback) document.getElementById('modal-back').onclick = backCallback;
     }
+    
+    // [수정된 부분] 초기화 함수: 선택자를 ID(#)로 정확히 변경
+    function initDragForAll() {
+      // 기존 코드에서 '.app-filter-tabs' -> '#app-filter-tabs' 로 변경되었습니다.
+      // 확실하게 작동하도록 주요 스크롤 영역 ID를 모두 포함했습니다.
+      const selectors = [
+        '#app-filter-tabs',       // 앱 필터 탭 (이게 빠져 있었음)
+        '#pc-tabs-container',     // PC 상단 탭
+        '#mobile-tabs-container', // 모바일 상단 탭
+        '#device-cat-tabs',       // 디바이스 모달 내부 탭
+        '#app-store-grid'         // 앱 스토어 가로 그리드
+      ];
+
+      selectors.forEach(sel => {
+        const el = document.querySelector(sel);
+        if (el) {
+          setupDragScroll(el);
+
+          // 스타일 보정: 가로 스크롤이 확실히 되도록 스타일 강제
+          el.style.overflowX = 'auto';
+          el.style.whiteSpace = 'nowrap';
+          el.style.display = 'flex';       // Flex로 배치
+          el.style.flexWrap = 'nowrap';    // 줄바꿈 방지
+          el.style.webkitOverflowScrolling = 'touch';
+
+          // 스크롤바 숨기기 (선택사항)
+          el.classList.add('no-scrollbar'); 
+        }
+      });
+    }
+    // call once on load
+    initDragForAll();
+    // If your app dynamically inserts these containers later, call initDragForAll() again after insertion
 
     function openDeviceModal(rIdx, rowIdx) {
       const cats = DEVICE_CATEGORIES;
@@ -2532,3 +2670,4 @@
   </script>
 </body>
 </html>
+
