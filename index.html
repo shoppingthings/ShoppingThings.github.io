@@ -614,7 +614,7 @@
       '스마트 홈 허브': ['hub', 'hub_zigbee', 'hub_thread', 'hub_zwave'],
       '스마트 홈 어댑터(동글)': ['hub', 'hub_zigbee'],
       '브릿지': ['hub'],
-      '스마트 스피커': ['hub_wifi', 'audio_out'],
+      '스마트 스피커': ['audio_out', 'speaker', 'volume'],
       '사운드바': ['audio_out'],
       '전구': ['light'], '조명': ['light'], '천장 조명': ['light'],
       '스위치/조광기': ['switch'],
@@ -628,7 +628,7 @@
       '도어록': ['doorlock'],
       '카메라': ['camera'], '초인종': ['camera'],
       '스마트 플러그': ['smart_plug'], '에너지 모니터링': ['energy_monitor'],
-      '로봇청소기': ['robot_cleaner']
+      '로봇청소기': ['robot_cleaner', 'vacuum', 'clean'],
     };
 
     const DEVICE_ICON_MAP = {
@@ -665,7 +665,13 @@
       '현관 카메라': '카메라', '홈 카메라': '카메라', 'CCTV': '카메라',
       
       // 가전
-      'TV': 'TV', '텔레비전': 'TV', '시스템 에어컨': '에어컨', '벽걸이 에어컨': '에어컨'
+      'TV': 'TV', '텔레비전': 'TV', '티비': 'TV', '텔레비젼': 'TV', 
+      
+      '로봇 청소기': '로봇청소기', 
+    
+      '차량 원격 시동기': '자동차', // '차량 제어' 대신 기존 프로필 사용
+      //에어컨
+      '시스템 에어컨': '에어컨', '벽걸이 에어컨': '에어컨'
     };
 
     // [신규] 프로필 매칭 헬퍼 함수
@@ -752,6 +758,99 @@
           return lights.length > 0 ? lights : null;
         }
       },
+      // 기상나팔 자동화
+      {
+          id: 'wakeup_horn',
+          name: '기상나팔 자동화',
+          desc: '설정된 시간에 스피커에서 지정된 소리를 재생하여 알람 역할을 합니다.',
+          icon: 'Volume2',
+          check: (devs) => {
+              // speaker capability를 가진 기기를 찾습니다.
+              const speakers = devs.filter(d => d.caps.includes('speaker'));
+              return speakers.length > 0 ? speakers : null;
+          }
+      },
+      //엄크 자동화 (엄마 크리티컬)
+      {
+          id: 'mom_emergency',
+          name: '엄크 자동화',
+          desc: '외부 움직임을 감지하면 지정된 기기(TV, PC 등)의 전원을 즉시 차단합니다.',
+          icon: 'ShieldOff',
+          check: (devs) => {
+              // 동작 감지 센서 (sensor)와 전원 차단 기기 (switch/power)가 필요합니다.
+              const sensors = devs.filter(d => d.caps.includes('sensor'));
+              const switches = devs.filter(d => d.caps.includes('switch') && d.caps.includes('power'));
+
+              if (sensors.length > 0 && switches.length > 0) {
+                  return [...new Set([...sensors, ...switches])];
+              }
+              return null;
+          }
+      },
+      // 인공지능 청정
+      {
+          id: 'ai_purifying',
+          name: '인공지능 청정',
+          desc: '실내 미세먼지 수치를 파악하여 공기청정기가 자동으로 작동 모드를 조절합니다.',
+          icon: 'AirVent',
+          check: (devs) => {
+              // 공기청정기 (air_purifier)와 공기질 센서 (sensor_air)가 필요합니다.
+              const purifiers = devs.filter(d => d.caps.includes('air_purifier'));
+              const airSensors = devs.filter(d => d.device === '공기질 센서'); // 프로필 이름으로 직접 비교
+
+              if (purifiers.length > 0 && airSensors.length > 0) {
+                   return [...new Set([...purifiers, ...airSensors])];
+              }
+              return null;
+          }
+      },
+      // 후드 자동화
+      {
+          id: 'range_hood',
+          name: '후드 자동화',
+          desc: '가스 감지 센서 또는 요리 시작 시점 감지 센서에 따라 주방 후드를 자동으로 켜고 끕니다.',
+          icon: 'Fan',
+          check: (devs) => {
+              // 후드(switch/fan)와 요리 감지 센서(cooktop) 또는 동작 센서(sensor)가 필요합니다.
+              const hoods = devs.filter(d => d.caps.includes('fan') && d.device === '후드');
+              const sensors = devs.filter(d => d.caps.includes('sensor'));
+
+              if (hoods.length > 0 && sensors.length > 0) {
+                  return [...new Set([...hoods, ...sensors])];
+              }
+              return null;
+          }
+      },
+      // 센서등 자동화
+      {
+          id: 'sensor_light',
+          name: '센서등 자동화',
+          desc: '움직임이 감지될 때만 조명을 켜고, 일정 시간 후 자동으로 끕니다.',
+          icon: 'Zap',
+          check: (devs) => {
+              // 동작 감지 센서 (sensor)와 조명 (light)이 모두 필요합니다.
+              const sensors = devs.filter(d => d.caps.includes('sensor'));
+              const lights = devs.filter(d => d.caps.includes('light'));
+
+              if (sensors.length > 0 && lights.length > 0) {
+                   return [...new Set([...sensors, ...lights])];
+              }
+              return null;
+          }
+      },
+      // 청소 자동화
+      {
+          id: 'cleaning_bot',
+          name: '청소 자동화',
+          desc: '사용자가 외출하거나 마지막 사람이 집을 나설 때 로봇 청소기가 청소를 시작합니다.',
+          icon: 'brush',
+          check: (devs) => {
+              // 로봇청소기 (vacuum) capability를 가진 기기를 찾습니다.
+              const vacuums = devs.filter(d => d.caps.includes('vacuum'));
+              return vacuums.length > 0 ? vacuums : null;
+          }
+      },
+      
       {
         id: 'sleep_light', name: '수면등 자동화', icon: 'Moon',
         desc: '취침 시간에 맞춰 수면에 방해되지 않는 은은한 조명으로 자동 전환합니다.',
