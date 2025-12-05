@@ -846,7 +846,7 @@
         }
       },
       {
-        id: 'fire_safety', name: '소방 대비 자동화', icon: 'Flame',
+        id: 'fire_safety', name: '소방 대비 자동화', icon: 'AlertTriangle',
         desc: '화재 감지 시 모든 조명을 켜고 대피 경로를 확보하며 알림을 보냅니다.',
         check: (devs) => {
            const smoke = devs.filter(d => d.device.includes('연기') || d.device.includes('화재'));
@@ -871,8 +871,8 @@
         }
       },
       {
-        id: 'phone_noti', name: '스마트폰 알림', icon: 'Smartphone',
-        desc: '집안의 상태 변화(문 열림, 누수 등)를 스마트폰으로 즉시 알려줍니다.',
+        id: 'phone_noti', name: '스마트폰 알림 자동화', icon: 'Smartphone',
+        desc: '집안의 상태(문 열림, 누수 등)의 바뀜을 스마트폰으로 즉시 알려줍니다.',
         check: (devs) => {
            const sensors = devs.filter(d => d.caps.some(c => c.startsWith('sensor')));
            return sensors.length > 0 ? sensors : null;
@@ -880,7 +880,7 @@
       },
       {
         id: 'middle_door', name: '중문 자동화', icon: 'Door',
-        desc: '현관에 들어서면 중문이 자동으로 열려 짐이 있어도 편리하게 입장합니다.',
+        desc: '현관에 들어서면 중문이 자동으로 열려 짐이 있어도 편하게 들어갑니다.',
         check: (devs) => {
            const motion = devs.filter(d => d.caps.includes('sensor_motion'));
            // Assuming a motor/opener is needed, but motion implies capability to trigger if installed
@@ -1118,36 +1118,6 @@
       
       initMarquees();
     }
-    function showAutoDetail(id) {
-       const auto = AUTOMATION_RULES.find(a => a.id === id);
-       if(!auto) return;
-       
-       // [수정] Capability 체크를 위해 getProfileName 적용
-       const devices = state.rooms.flatMap((r, ri) => r.rows.map(row => ({ 
-           ...row, 
-           rIdx: ri, 
-           caps: CAPABILITY_MAP[getProfileName(row.device)] || [] 
-       })));
-       
-       const related = auto.check(devices) || [];
-       const relatedNames = [...new Set(related.map(r => r.device))].join(', ');
-
-       const html = `
-         <div class="p-6 text-center">
-            <div class="w-20 h-20 mx-auto rounded-full bg-blue-50 dark:bg-slate-800 flex items-center justify-center text-brand mb-4 shadow-inner">
-               ${getIcon(auto.icon, 40)}
-            </div>
-            <h3 class="text-xl font-black text-slate-900 dark:text-white mb-2">${auto.name}</h3>
-            <p class="text-slate-500 dark:text-slate-400 leading-relaxed mb-6">${auto.desc}</p>
-            <div class="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 text-left">
-               <div class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">필요 기기 (충족됨)</div>
-               <div class="text-sm font-medium text-slate-800 dark:text-slate-200">${relatedNames}</div>
-            </div>
-         </div>
-       `;
-       openModal(html, '자동화 상세');
-    }
-    
     // --- MAP VIEW RENDERER ---
     function renderMapView() {
       const container = document.getElementById('map-view-area');
@@ -1322,7 +1292,7 @@
             </div>
          </div>
        `;
-       openModal(html, '자동화 상세');
+       openModal(html, '자동화 추천');
     }
     
     function scrollToRoom(idx) {
