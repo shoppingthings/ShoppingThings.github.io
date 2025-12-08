@@ -1841,8 +1841,8 @@
         { name: 'App Store', tags: ['phone', 'tab', 'watch'], url: 'https://apps.apple.com/kr/app/samsung-smartthings/id1222822904', color: 'bg-blue-500', icon: 'Box', logo: 'appstore.png' },
         { name: 'Microsoft Store', tags: ['pc'], url: 'https://apps.microsoft.com/detail/9n3zbh5v7hx6?hl=ko-KR&gl=KR', color: 'bg-blue-600', icon: 'Grid', logo: 'microsoft.png' },
         { name: 'Samsung TV', tags: ['tv'], url: 'https://www.samsungsvc.co.kr/solution/2395698?assess=N', color: 'bg-indigo-900', icon: 'Grid', logo: 'samsung.png' },
-        { name: 'My SmartThings', tags: ['web'], url: 'https://my.smartthings.com/advanced', color: 'bg-indigo-600', icon: 'Monitor', logo: 'st_web.png' },
-        { name: 'SmartThings Pro', tags: ['web'], url: 'https://www.smartthingspro.ai/', color: 'bg-indigo-600', icon: 'Monitor', logo: 'st_web.png' },
+        { name: 'My SmartThings', tags: ['web'], url: 'https://my.smartthings.com/advanced', color: 'bg-indigo-600', icon: 'Monitor', logo: 'SmartThings.png' },
+        { name: 'SmartThings Pro', tags: ['web'], url: 'https://www.smartthingspro.ai/', color: 'bg-indigo-600', icon: 'Monitor', logo: 'SmartThings_Pro.png' },
         { name: 'Pleos', tags: ['car'], url: 'https://news.samsung.com/kr/%EC%82%BC%EC%84%B1%EC%A0%84%EC%9E%90-%ED%98%84%EB%8C%80%EC%9E%90%EB%8F%99%EC%B0%A8%EA%B7%B8%EB%A3%B9%EA%B3%BC-%EC%86%90%EC%9E%A1%EA%B3%A0-%EC%8A%A4%EB%A7%88%ED%8A%B8%ED%99%88-%EC%BB%A4%EB%84%A5', color: 'bg-slate-700', icon: 'Play', logo: 'pleos.png' },
         { name: 'CCNC (현대, 기아)', tags: ['car'], url: 'https://news.samsung.com/kr/%EC%82%BC%EC%84%B1%EC%A0%84%EC%9E%90-%ED%98%84%EB%8C%80%EC%9E%90%EB%8F%99%EC%B0%A8%EA%B7%B8%EB%A3%B9%EA%B3%BC-%EC%86%90%EC%9E%A1%EA%B3%A0-%EC%8A%A4%EB%A7%88%ED%8A%B8%ED%99%88-%EC%BB%A4%EB%84%A5', color: 'bg-blue-800', icon: 'Car', logo: 'ccnc.png' },
         { name: 'CCIC (제네시스)', tags: ['car'], url: 'https://news.samsung.com/kr/%EC%82%BC%EC%84%B1%EC%A0%84%EC%9E%90-%ED%98%84%EB%8C%80%EC%9E%90%EB%8F%99%EC%B0%A8%EA%B7%B8%EB%A3%B9%EA%B3%BC-%EC%86%90%EC%9E%A1%EA%B3%A0-%EC%8A%A4%EB%A7%88%ED%8A%B8%ED%99%88-%EC%BB%A4%EB%84%A5', color: 'bg-black', icon: 'Car', logo: 'ccic.png' }
@@ -2786,21 +2786,16 @@
     }
 
     const exportToPNG = async () => {
-      if (!window.htmlToImage) return alert('Library not loaded');
+      if (!window.htmlToImage) return alert('html-to-image 라이브러리가 로드되지 않았습니다.');
       
       const btn = document.getElementById('btn-export-mobile');
       const originalText = btn.innerHTML;
-      const isSamsung = navigator.userAgent.match(/SamsungBrowser/i);
       
-      btn.innerHTML = `${getIcon('Camera', 20, 'animate-pulse')} <span class="font-bold text-xs">캡처중... ${isSamsung ? '(자동 다운로드 차단을 끄세요)' : ''}</span>`;
+      // 로딩 표시
+      btn.innerHTML = `${getIcon('Camera', 20, 'animate-pulse')} <span class="font-bold text-xs">캡처중...</span>`;
       
-      // Temporary Style Adjustments
+      // 1. 화면 정리
       const noPrints = document.querySelectorAll('.no-print-target');
-      // Hide all no-print targets EXCEPT the export buttons if they exist in that list (though user said Keep FAB)
-      // The filter function below is the primary way we exclude/include. 
-      // But we still hide them from DOM to clean up layout shifts if needed? 
-      // Actually, hiding them from DOM removes them from image too. 
-      // So we must NOT hide the FABs if we want them in image.
       noPrints.forEach(el => {
           if (el.id !== 'btn-export-mobile' && el.id !== 'btn-tuto-mobile') {
               el.style.display = 'none';
@@ -2809,30 +2804,48 @@
 
       document.body.classList.add('no-scrollbar');
       
-      // Disable Backdrop Filter for Mobile Stability
+      // 2. 글래스모피즘 및 그림자 제거
       const glassEls = document.querySelectorAll('.glass, .backdrop-blur-md, .backdrop-blur-sm');
       glassEls.forEach(el => el.style.backdropFilter = 'none');
 
-      // Add Overlay Inputs
+      // 3. [핵심 수정] 로딩되지 않은 이미지(엑박) 숨기기
+      // 로컬 파일에서 이미지가 없으면 라이브러리가 에러를 내므로, 
+      // 현재 화면에 제대로 안 뜬 이미지는 캡처 대상에서 제외합니다.
+      const images = document.querySelectorAll('img');
+      const brokenImages = [];
+      images.forEach(img => {
+          // naturalWidth가 0이면 이미지가 로드되지 않은 상태입니다.
+          if (img.naturalWidth === 0 || img.src === '' || img.style.display === 'none') {
+              // 원래 display 값을 저장해두고 숨김 처리
+              const originalDisplay = img.style.display;
+              img.dataset.originalDisplay = originalDisplay;
+              img.style.display = 'none'; 
+              brokenImages.push(img);
+          }
+      });
+
+      // 4. Input 값 텍스트 변환
       const inputs = document.querySelectorAll('input');
       const overlays = [];
       inputs.forEach(el => {
         const rect = el.getBoundingClientRect();
-        if(rect.width === 0) return;
+        if(rect.width === 0 || el.type === 'hidden') return;
+        
         const span = document.createElement('div');
         span.textContent = el.value;
         const style = window.getComputedStyle(el);
         Object.assign(span.style, {
            position: 'absolute', left: (rect.left+window.scrollX)+'px', top: (rect.top+window.scrollY)+'px', width: rect.width+'px', height: rect.height+'px',
            zIndex: '99999', background: 'transparent', fontSize: style.fontSize, fontWeight: style.fontWeight, fontFamily: style.fontFamily,
-           textAlign: style.textAlign, padding: style.padding, lineHeight: style.lineHeight, color: style.color, display: 'flex', alignItems: 'center', justifyContent: el.classList.contains('text-center')?'center':'flex-start'
+           textAlign: style.textAlign, padding: style.padding, lineHeight: style.lineHeight, color: style.color, display: 'flex', alignItems: 'center', 
+           justifyContent: el.classList.contains('text-center')?'center':'flex-start', pointerEvents: 'none'
         });
         document.body.appendChild(span);
         overlays.push({el, span});
         el.style.visibility = 'hidden';
       });
 
-      // Add Tiled Watermark
+      // 5. 워터마크 추가
       const tile = document.createElement('div');
       Object.assign(tile.style, { position: 'absolute', left: '0', top: '0', width: document.documentElement.scrollWidth+'px', height: document.documentElement.scrollHeight+'px', pointerEvents: 'none', zIndex: '99998', display: 'flex', flexWrap: 'wrap', overflow: 'hidden' });
       
@@ -2844,12 +2857,18 @@
       }
       document.body.appendChild(tile);
 
-
+      // 정리 함수
       const cleanup = () => {
          noPrints.forEach(el => el.style.removeProperty('display'));
          document.body.classList.remove('no-scrollbar');
          glassEls.forEach(el => el.style.removeProperty('backdrop-filter'));
          overlays.forEach(o => { o.el.style.visibility = ''; o.span.remove(); });
+         
+         // 숨겼던 이미지 복구
+         brokenImages.forEach(img => {
+             img.style.display = img.dataset.originalDisplay || '';
+         });
+         
          tile.remove();
          btn.innerHTML = originalText;
       };
@@ -2857,57 +2876,33 @@
       try {
         const dateStr = new Date().toISOString().slice(0,10).replace(/-/g,'');
         
-        // Filter function: Returns true if node should be included
         const filterNode = (node) => {
            if (node.id === 'btn-export-mobile' || node.id === 'btn-tuto-mobile') return false;
            return !node.classList?.contains('no-print-target');
         };
 
-        // Manual Font Inlining to Avoid CORS issues with Google Fonts
-        const linkTags = Array.from(document.querySelectorAll('link[rel="stylesheet"]'));
-        const googleFontLink = linkTags.find(l => l.href.includes('fonts.googleapis.com'));
-        let styleTag = null;
-        
-        if (googleFontLink) {
-           try {
-             const resp = await fetch(googleFontLink.href);
-             const cssText = await resp.text();
-             styleTag = document.createElement('style');
-             styleTag.innerHTML = cssText;
-             document.head.appendChild(styleTag);
-             googleFontLink.classList.add('ignore-for-capture'); 
-           } catch(e) { console.warn('Font inline failed', e); }
-        }
+        const options = { 
+            backgroundColor: state.theme === 'dark' ? '#0f172a' : '#f8fafc',
+            cacheBust: true,
+            useCORS: true,       
+            skipOnError: true,   // 에러 발생 시 무시하고 계속 진행
+            filter: filterNode,
+            pixelRatio: 1        
+        };
 
-        // Attempt 1: High Quality
-        try {
-            const blob = await htmlToImage.toBlob(document.body, { 
-                pixelRatio: isSamsung ? 1 : 2,
-                backgroundColor: state.theme === 'dark' ? '#0f172a' : '#f8fafc',
-                skipAutoScale: true,
-                cacheBust: true,
-                filter: filterNode
-            });
-            downloadBlob(blob, `iot_shoppinglist_${dateStr}_shoppingthings.png`);
-        } catch(err) {
-            console.warn('High quality capture failed, retrying with lower settings...', err);
-            // Attempt 2: Low Quality Fallback
-            const blob = await htmlToImage.toBlob(document.body, { 
-                pixelRatio: 1,
-                backgroundColor: state.theme === 'dark' ? '#0f172a' : '#f8fafc',
-                skipAutoScale: true,
-                cacheBust: true,
-                filter: filterNode
-            });
-            downloadBlob(blob, `iot_shoppinglist_${dateStr}_optimized_shoppingthings.png`);
-        }
+        // html-to-image 실행
+        const blob = await htmlToImage.toBlob(document.body, options);
         
-        if(styleTag) styleTag.remove();
-        if(googleFontLink) googleFontLink.classList.remove('ignore-for-capture');
+        if (!blob) throw new Error('이미지 생성 결과가 비어있습니다.');
+        downloadBlob(blob, `iot_shoppinglist_${dateStr}.png`);
 
       } catch(e) { 
-        console.error(e); 
-        alert('이미지 저장에 실패했습니다. 잠시 후 다시 시도해주세요.'); 
+        console.error("Export Error:", e);
+        // 에러 객체가 Event인 경우 메시지 추출 시도
+        let msg = e.message || e;
+        if (e.type === 'error') msg = '이미지 리소스 로딩 중 보안 에러 발생 (로컬 파일 제한)';
+        
+        alert('저장 실패: ' + msg + '\n(브라우저의 보안 및 개인정보 보호 설정에서 자동 다운로드 차단을 off로 세팅해주세요.)');
       } finally {
         cleanup();
       }
