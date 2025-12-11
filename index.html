@@ -310,7 +310,7 @@
     <div class="flex items-center justify-between px-4 h-16 w-full max-w-7xl mx-auto">
       <div class="flex items-center gap-3">
         <button id="btn-sidebar-toggle" class="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg hidden md:flex text-slate-500 dark:text-slate-400 transition-colors"></button>
-        <div class="w-10 h-10 rounded-xl bg-white dark:bg-slate-800 flex items-center justify-center shadow-sm overflow-hidden">
+        <div class="w-10 h-10 flex items-center justify-center overflow-hidden">
           <img src="images/icons/general/logo_shoppingthings_512h.png" alt="ShoppingThings" class="w-full h-full object-cover" onerror="this.style.display='none';this.parentElement.innerText='ST'">
         </div>
         <h1 class="font-logo font-bold text-lg tracking-wide text-slate-900 dark:text-white pt-0.5">ShoppingThings</h1>
@@ -899,13 +899,13 @@
         qty: 3 
       },
       { 
-        name: '방의 색 온도를 바꾸기', 
+        name: '색 온도를 바꾸는 전구', 
         device: '필립스 휴 화이트 앰비언스', 
         protocol: 'Zigbee', 
         qty: 4 
       },
       { 
-        name: '라인조명 고트', 
+        name: '라이트스트립', 
         device: '필립스 휴 그라디언트', 
         protocol: 'Zigbee', 
         qty: 5
@@ -923,7 +923,7 @@
         qty: 7
       },
       { 
-        name: '플러그로 일반 제품을 IoT화', 
+        name: '플러그로 일반 제품을 IoT화 하기', 
         device: '다원 지그비 플러그 16A SmartThings', 
         protocol: 'Zigbee', 
         qty: 8
@@ -3126,7 +3126,7 @@
       captureHeader.className = "w-full flex flex-col items-center justify-center py-10 mb-4 bg-transparent";
       captureHeader.innerHTML = `
         <div class="flex items-center gap-3 mb-2">
-            <div class="w-12 h-12 rounded-xl bg-white dark:bg-slate-800 flex items-center justify-center shadow-sm overflow-hidden">
+            <div class="w-12 h-12 flex items-center justify-center overflow-hidden">
           <img src="images/icons/general/logo_shoppingthings_512h.png" alt="ShoppingThings" class="w-full h-full object-cover" onerror="this.style.display='none';this.parentElement.innerText='ST'">
         </div>
             <h1 class="font-logo font-bold text-3xl tracking-wide text-slate-900 dark:text-white">ShoppingThings</h1>
