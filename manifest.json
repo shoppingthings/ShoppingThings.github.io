@@ -1,6 +1,6 @@
 {
   "name": "ShoppingThings",
-  "short_name": "ㅁShoppingThings",
+  "short_name": "ShoppingThings",
   "description": "스마트홈 IoT 쇼핑리스트와 기기 호환성, 자동화 점수를 분석해주는 체크리스트입니다.",
   "start_url": "./index.html",
   "display": "standalone",
@@ -9,7 +9,7 @@
   "theme_color": "#008DF7",
   "icons": [
     {
-      "src": "images/icons/general/logo_shoppingthings_512h.png",
+      "src": "images/icons/general/logo_shoppingthings_192h.png",
       "sizes": "192x192",
       "type": "image/png"
     },
@@ -19,7 +19,7 @@
       "type": "image/png"
     },
     {
-      "src": "images/icons/general/logo_shoppingthings_512h.png",
+      "src": "images/icons/general/logo_shoppingthings_192h.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "maskable"
