@@ -438,7 +438,7 @@
               <span class="opacity-90 font-light">가이드북</span>
             </h2>
             <p class="text-blue-50 text-lg mb-10 font-medium leading-relaxed max-w-md">
-              스마트홈이 처음이신가요?<br class="md:hidden"/> 30초 튜토리얼로<br class="hidden md:inline"/> 스마트홈 쇼핑리스트 제작을 마스터하세요.
+              스마트홈이 신가요?<br class="md:hidden"/> 30초 튜토리얼로<br class="hidden md:inline"/> 스마트홈 쇼핑리스트 제작을 마스터하세요.
             </p>
             <button onclick="TutorialController.open()" class="group px-8 py-3.5 bg-white text-brand-dark rounded-full font-bold text-lg shadow-xl shadow-black/10 hover:shadow-white/20 hover:scale-105 transition-all flex items-center gap-3 active:scale-95">
                <span>튜토리얼 시작하기</span>
@@ -582,10 +582,10 @@
   </div>
 
   <!-- Mobile FAB -->
-  <button id="btn-export-mobile" class="fixed right-4 bottom-28 z-50 bg-gradient-to-r from-brand-light to-brand text-white pl-4 pr-4 py-3 rounded-full shadow-2xl shadow-brand/40 flex items-center gap-2 active:scale-95 transition-transform no-print-target">
+  <button id="btn-export-mobile" class="fixed right-4 bottom-28 z-50 bg-gradient-to-r from-brand-light to-brand text-white pl-4 pr-4 py-2.7 rounded-full shadow-2xl shadow-brand/40 flex items-center gap-2 active:scale-95 transition-transform no-print-target">
     <span class="font-bold text-sm">이미지로 저장</span>
   </button>
-  <button id="btn-tuto-mobile" onclick="TutorialController.open()" class="hidden fixed right-4 bottom-28 z-50 bg-gradient-to-r from-brand-light to-brand text-white pl-4 pr-4 py-3 rounded-full shadow-2xl shadow-brand/40 flex items-center gap-2 active:scale-95 transition-transform no-print-target">
+  <button id="btn-tuto-mobile" onclick="TutorialController.open()" class="hidden fixed right-4 bottom-28 z-50 bg-gradient-to-r from-brand-light to-brand text-white pl-4 pr-4 py-3.5 rounded-full shadow-2xl shadow-brand/40 flex items-center gap-2 active:scale-95 transition-transform no-print-target">
     <span class="font-bold text-sm">튜토리얼</span>
   </button>
 
@@ -604,6 +604,9 @@
   <div id="popover-root"></div>
   <div id="autocomplete-root"></div>
   <!-- Main Script -->
+  
+  <script src="js/tutorial-controller.js"></script>
+  <script src="js/export-service.js"></script>
   <script>
     // --- DATA CONSTANTS ---
     const STORAGE_KEY = 'shoppingthings:rooms:v9';
@@ -946,7 +949,7 @@
         qty: 7
       },
       { 
-        name: '플러그로 일반 제품을 IoT화 하기', 
+        name: '일반 제품을 IoT화 하기', 
         device: '다원 지그비 플러그 16A', 
         protocol: 'Zigbee', 
         qty: 8
@@ -1715,86 +1718,6 @@
            setTimeout(() => els[idx].classList.remove('ring-4', 'ring-brand/50'), 1500);
         }
     }
-
-    // --- TUTORIAL CONTROLLER ---
-    const TutorialController = (() => {
-      let currentStep = 0;
-      const steps = [
-        { title: "ShoppingThings가 처음인가요? 👋", desc: "어떤 스마트홈을 만들지 고민하지 마세요.<br>하고 싶은 기기만 고르면 추천해드릴게요.", icon: "👋" },
-        { title: "방마다 기기를 선택하세요 🏠", desc: "방을 추가하고 조명, 센서, 가전 등을 골라보세요.<br>그냥 갖고 싶은 것만 체크하면 돼요.", icon: "🛋️" },
-        { title: "자동화 점수 계산 💯", desc: "선택한 기기로 어떤 자동화가 가능한지 분석해줍니다.<br>점수가 높을수록 똑똑한 집이에요!", icon: "⚡" },
-        { title: "결과 저장하기 💾", desc: "완성된 체크리스트는 이미지로 저장할 수 있어요.<br>갤러리에 보관하세요.", icon: "🖼️" },
-        { title: "커뮤니티에 공유하기 🗣️", desc: "스마트싱스 갤러리에 내 계획을 공유하고<br>전문가들의 조언을 받아보세요!", icon: "💬" },
-        { title: "이제 시작해볼까요? 🚀", desc: "ShoppingThings가 당신의 스마트홈 여정을<br>항상 응원할게요!", icon: "🎉", isLast: true }
-      ];
-
-      function render() {
-        const track = document.getElementById('tuto-track');
-        const dots = document.getElementById('tuto-dots');
-        if(!track) return;
-
-        track.innerHTML = steps.map((s, i) => `
-          <div class="w-full shrink-0 flex flex-col items-center justify-center p-8 text-center slider-slide">
-            <div class="text-6xl mb-6 animate-bounce">${s.icon}</div>
-            <h3 class="text-2xl font-black text-slate-900 dark:text-white mb-4">${s.title}</h3>
-            <p class="text-slate-500 dark:text-slate-400 leading-relaxed mb-8">${s.desc}</p>
-            ${s.isLast ? `<button onclick="TutorialController.close(); switchView('checklist')" class="px-8 py-3 bg-brand text-white rounded-full font-bold shadow-xl hover:scale-105 transition-transform">시작하기</button>` : ''}
-          </div>
-        `).join('');
-        
-        dots.innerHTML = steps.map((_, i) => `
-          <div class="w-2 h-2 rounded-full transition-all ${i === currentStep ? 'bg-brand w-6' : 'bg-slate-300 dark:bg-slate-700'}"></div>
-        `).join('');
-        
-        updatePos();
-      }
-
-      function updatePos() {
-        const track = document.getElementById('tuto-track');
-        if(track) track.style.transform = `translateX(-${currentStep * 100}%)`;
-        
-        const dots = document.getElementById('tuto-dots');
-        Array.from(dots.children).forEach((d, i) => {
-           d.className = `w-2 h-2 rounded-full transition-all ${i === currentStep ? 'bg-brand w-6' : 'bg-slate-300 dark:bg-slate-700'}`;
-        });
-
-        const prevBtn = document.getElementById('tuto-prev');
-        const nextBtn = document.getElementById('tuto-next');
-        if(prevBtn) prevBtn.classList.toggle('hidden', currentStep === 0);
-        if(nextBtn) nextBtn.innerText = currentStep === steps.length - 1 ? '완료' : '다음';
-        if(nextBtn) nextBtn.style.display = currentStep === steps.length - 1 ? 'none' : 'block';
-      }
-
-      function next() {
-        if (currentStep < steps.length - 1) {
-          currentStep++;
-          updatePos();
-        } else {
-          close();
-          switchView('checklist');
-        }
-      }
-      
-      function prev() {
-        if (currentStep > 0) {
-          currentStep--;
-          updatePos();
-        }
-      }
-
-      function open() {
-        currentStep = 0;
-        const modal = document.getElementById('tutorial-modal');
-        modal.classList.remove('hidden');
-        render();
-      }
-      
-      function close() {
-        document.getElementById('tutorial-modal').classList.add('hidden');
-      }
-
-      return { open, close, next, prev };
-    })();
 
     // --- UI CONTROLLER FOR SCORE & NOTIFICATIONS ---
     const ScoreUI = (() => {
