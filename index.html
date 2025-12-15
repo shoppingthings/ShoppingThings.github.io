@@ -582,7 +582,7 @@
   </div>
 
   <!-- Mobile FAB -->
-  <button id="btn-export-mobile" class="fixed right-4 bottom-28 z-50 bg-gradient-to-r from-brand-light to-brand text-white pl-4 pr-4 py-2.7 rounded-full shadow-2xl shadow-brand/40 flex items-center gap-2 active:scale-95 transition-transform no-print-target">
+  <button id="btn-export-mobile" class="fixed right-4 bottom-28 z-50 bg-gradient-to-r from-brand-light to-brand text-white pl-4 pr-4 py-3.5 rounded-full shadow-2xl shadow-brand/40 flex items-center gap-2 active:scale-95 transition-transform no-print-target">
     <span class="font-bold text-sm">이미지로 저장</span>
   </button>
   <button id="btn-tuto-mobile" onclick="TutorialController.open()" class="hidden fixed right-4 bottom-28 z-50 bg-gradient-to-r from-brand-light to-brand text-white pl-4 pr-4 py-3.5 rounded-full shadow-2xl shadow-brand/40 flex items-center gap-2 active:scale-95 transition-transform no-print-target">
@@ -698,47 +698,40 @@
       other: { devicetype: 'other', name: '기타', category: '라이프스타일/기타', icon: 'other', capabilities: [], synonyms: [] }
     };
 
-    // [마이그레이션: 자동 파생 맵들]
-    // 이들은 DEVICE_PROFILE에서 자동으로 생성됩니다. 단일 소스 유지.
+
+    // 자동 파생 맵들
     const DEVICE_CATEGORIES = [...new Set(Object.values(DEVICE_PROFILE).map(p => p.category))];
-    const CAPABILITY_MAP = Object.fromEntries(Object.values(DEVICE_PROFILE).map(p => [p.name, p.capabilities]));
-    const DEVICE_ICON_MAP = Object.fromEntries(Object.values(DEVICE_PROFILE).map(p => [p.name, p.icon]));
-    const CATEGORY_DEVICE_MAP = DEVICE_CATEGORIES.reduce((acc, cat) => {
-    acc[cat] = Object.values(DEVICE_PROFILE).filter(p => p.category === cat).map(p => p.name);
-    return acc;
-    }, {});
-    
-    // 자동 파생 맵들 (정규화된 synonym 딕셔너리 생성)
-    const NORMALIZED_SYNONYM_MAP = Object.fromEntries(
-      Object.values(DEVICE_PROFILE).flatMap(profile =>
-        profile.synonyms.map(syn => {
-          const normalized = syn.trim().toLowerCase();
-          return [normalized, profile.name];
-        })
-      )
+
+    const CAPABILITY_MAP = Object.fromEntries(
+      Object.values(DEVICE_PROFILE).map(p => [p.name, p.capabilities])
     );
 
-    // 프로필 매칭 헬퍼 (대소문자/공백 무시 + 정규화 강화)
+    const DEVICE_ICON_MAP = Object.fromEntries(
+      Object.values(DEVICE_PROFILE).map(p => [p.name, p.icon])
+    );
+
+    const DEVICE_SYNONYM_DICTIONARY = Object.fromEntries(
+      Object.values(DEVICE_PROFILE).flatMap(p => p.synonyms.map(s => [s.toLowerCase().trim(), p.name]))
+    );
+
+    const CATEGORY_DEVICE_MAP = DEVICE_CATEGORIES.reduce((acc, cat) => {
+      acc[cat] = Object.values(DEVICE_PROFILE)
+        .filter(p => p.category === cat)
+        .map(p => p.name);
+      return acc;
+    }, {});
+
+    // 프로필 매칭 헬퍼 (개선: 정규화 추가)
     function getProfileName(userInputName) {
       if (!userInputName) return '';
-
-      const input = userInputName.trim();
-      const lowered = input.toLowerCase();
-
-      // 1. 정확한 name 매칭 (대소문자 무시)
-      const exactProfile = Object.values(DEVICE_PROFILE).find(p => 
-        p.name.toLowerCase() === lowered
-      );
-      if (exactProfile) return exactProfile.name;
-
-      // 2. 정규화된 synonym 매칭
-      if (NORMALIZED_SYNONYM_MAP[lowered]) {
-        return NORMALIZED_SYNONYM_MAP[lowered];
-      }
-
-      // 3. 매칭 실패 시 원본 반환 (아이콘은 other 처리됨)
-      return input; // 원본 유지 (사용자가 입력한 그대로 표시)
+      const normalized = userInputName.toLowerCase().trim();
+      const exact = Object.values(DEVICE_PROFILE).find(p => p.name.toLowerCase() === normalized);
+      if (exact) return exact.name;
+      const matchedName = DEVICE_SYNONYM_DICTIONARY[normalized];
+      if (matchedName) return matchedName;
+      return userInputName; // 매칭 실패 시 원본 반환
     }
+
     const DEFAULT_PRESETS = [
       { 
         name: '스마트홈의 시작', 
