@@ -1573,6 +1573,86 @@
         }
     }
 
+    // --- TUTORIAL CONTROLLER ---
+    const TutorialController = (() => {
+      let currentStep = 0;
+      const steps = [
+        { title: "ShoppingThings가 처음인가요? 👋", desc: "어떤 스마트홈을 만들지 고민하지 마세요.<br>하고 싶은 기기만 고르면 추천해드릴게요.", icon: "👋" },
+        { title: "방마다 기기를 선택하세요 🏠", desc: "방을 추가하고 조명, 센서, 가전 등을 골라보세요.<br>그냥 갖고 싶은 것만 체크하면 돼요.", icon: "🛋️" },
+        { title: "자동화 점수 계산 💯", desc: "선택한 기기로 어떤 자동화가 가능한지 분석해줍니다.<br>점수가 높을수록 똑똑한 집이에요!", icon: "⚡" },
+        { title: "결과 저장하기 💾", desc: "완성된 체크리스트는 이미지로 저장할 수 있어요.<br>갤러리에 보관하세요.", icon: "🖼️" },
+        { title: "커뮤니티에 공유하기 🗣️", desc: "스마트싱스 갤러리에 내 계획을 공유하고<br>전문가들의 조언을 받아보세요!", icon: "💬" },
+        { title: "이제 시작해볼까요? 🚀", desc: "ShoppingThings가 당신의 스마트홈 여정을<br>항상 응원할게요!", icon: "🎉", isLast: true }
+      ];
+
+      function render() {
+        const track = document.getElementById('tuto-track');
+        const dots = document.getElementById('tuto-dots');
+        if(!track) return;
+
+        track.innerHTML = steps.map((s, i) => `
+          <div class="w-full shrink-0 flex flex-col items-center justify-center p-8 text-center slider-slide">
+            <div class="text-6xl mb-6 animate-bounce">${s.icon}</div>
+            <h3 class="text-2xl font-black text-slate-900 dark:text-white mb-4">${s.title}</h3>
+            <p class="text-slate-500 dark:text-slate-400 leading-relaxed mb-8">${s.desc}</p>
+            ${s.isLast ? `<button onclick="TutorialController.close(); switchView('checklist')" class="px-8 py-3 bg-brand text-white rounded-full font-bold shadow-xl hover:scale-105 transition-transform">시작하기</button>` : ''}
+          </div>
+        `).join('');
+        
+        dots.innerHTML = steps.map((_, i) => `
+          <div class="w-2 h-2 rounded-full transition-all ${i === currentStep ? 'bg-brand w-6' : 'bg-slate-300 dark:bg-slate-700'}"></div>
+        `).join('');
+        
+        updatePos();
+      }
+
+      function updatePos() {
+        const track = document.getElementById('tuto-track');
+        if(track) track.style.transform = `translateX(-${currentStep * 100}%)`;
+        
+        const dots = document.getElementById('tuto-dots');
+        Array.from(dots.children).forEach((d, i) => {
+           d.className = `w-2 h-2 rounded-full transition-all ${i === currentStep ? 'bg-brand w-6' : 'bg-slate-300 dark:bg-slate-700'}`;
+        });
+
+        const prevBtn = document.getElementById('tuto-prev');
+        const nextBtn = document.getElementById('tuto-next');
+        if(prevBtn) prevBtn.classList.toggle('hidden', currentStep === 0);
+        if(nextBtn) nextBtn.innerText = currentStep === steps.length - 1 ? '완료' : '다음';
+        if(nextBtn) nextBtn.style.display = currentStep === steps.length - 1 ? 'none' : 'block';
+      }
+
+      function next() {
+        if (currentStep < steps.length - 1) {
+          currentStep++;
+          updatePos();
+        } else {
+          close();
+          switchView('checklist');
+        }
+      }
+      
+      function prev() {
+        if (currentStep > 0) {
+          currentStep--;
+          updatePos();
+        }
+      }
+
+      function open() {
+        currentStep = 0;
+        const modal = document.getElementById('tutorial-modal');
+        modal.classList.remove('hidden');
+        render();
+      }
+      
+      function close() {
+        document.getElementById('tutorial-modal').classList.add('hidden');
+      }
+
+      return { open, close, next, prev };
+    })();
+
     // --- UI CONTROLLER FOR SCORE & NOTIFICATIONS ---
     const ScoreUI = (() => {
       const getEl = (id) => document.getElementById(id);
