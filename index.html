@@ -3072,54 +3072,119 @@
       window.addEventListener('scroll', handleScroll, { passive: true });
     }
  
+    // PNG 내보내기 함수 (Layout Shift 문제 해결 버전)
     const exportToPNG = async () => {
-      if (!window.htmlToImage) return alert('Library not loaded');
+      if (!window.htmlToImage) return alert('html-to-image 라이브러리가 로드되지 않았습니다.');
       
       const btn = document.getElementById('btn-export-mobile');
       const originalText = btn.innerHTML;
-      const isSamsung = navigator.userAgent.match(/SamsungBrowser/i);
       
-      btn.innerHTML = `${getIcon('Camera', 20, 'animate-pulse')} <span class="font-bold text-xs">캡처중... ${isSamsung ? '(자동 다운로드 차단을 끄세요)' : ''}</span>`;
+      // 로딩 표시
+      btn.innerHTML = `${getIcon('Camera', 20, 'animate-pulse')} <span class="font-bold text-xs">캡처중...</span>`;
       
-      // Temporary Style Adjustments
+      // 캡처 도중 레이아웃이 밀릴 때 애니메이션이 발생하면 좌표가 꼬입니다.
+      // 캡처 순간에만 모든 트랜지션을 강제로 끕니다.
+      const style = document.createElement('style');
+      style.id = 'capture-style-override';
+      style.innerHTML = `
+        * { 
+           transition: none !important; 
+           animation: none !important; 
+        }
+      `;
+      document.head.appendChild(style);
+
+      // 1. 화면 정리 (UI 숨기기)
       const noPrints = document.querySelectorAll('.no-print-target');
-      // Hide all no-print targets EXCEPT the export buttons if they exist in that list (though user said Keep FAB)
-      // The filter function below is the primary way we exclude/include. 
-      // But we still hide them from DOM to clean up layout shifts if needed? 
-      // Actually, hiding them from DOM removes them from image too. 
-      // So we must NOT hide the FABs if we want them in image.
       noPrints.forEach(el => {
           if (el.id !== 'btn-export-mobile' && el.id !== 'btn-tuto-mobile') {
+              el.dataset.prevDisplay = el.style.display; // 원래 display 상태 저장
               el.style.display = 'none';
           }
       });
 
       document.body.classList.add('no-scrollbar');
       
-      // Disable Backdrop Filter for Mobile Stability
+      // 2. 글래스모피즘 제거
       const glassEls = document.querySelectorAll('.glass, .backdrop-blur-md, .backdrop-blur-sm');
-      glassEls.forEach(el => el.style.backdropFilter = 'none');
+      glassEls.forEach(el => {
+          el.dataset.prevFilter = el.style.backdropFilter;
+          el.style.backdropFilter = 'none';
+      });
 
-      // Add Overlay Inputs
+      // 3. 캡처 전용 헤더 추가
+      const captureHeader = document.createElement('div');
+      captureHeader.id = 'capture-header-temp';
+      captureHeader.className = "w-full flex flex-col items-center justify-center py-10 mb-4 bg-transparent";
+      captureHeader.innerHTML = `
+        <div class="flex items-center gap-3 mb-2">
+            <div class="w-12 h-12 flex items-center justify-center overflow-hidden">
+          <img src="images/icons/general/logo_shoppingthings_512h.png" alt="ShoppingThings" class="w-full h-full object-cover" onerror="this.style.display='none';this.parentElement.innerText='ST'">
+        </div>
+            <h1 class="font-logo font-bold text-3xl tracking-wide text-slate-900 dark:text-white">ShoppingThings</h1>
+        </div>
+        <p class="text-slate-500 font-medium">스마트홈 디바이스 쇼핑 체크리스트</p>
+      `;
+      
+      const mainContent = document.getElementById('main-content');
+      // 헤더 삽입
+      mainContent.insertBefore(captureHeader, mainContent.firstChild);
+
+      // 브라우저가 변경된 레이아웃(헤더 삽입으로 인한 밀림)을 
+      // 확실하게 그릴 시간을 줍니다 (100ms 딜레이).
+      // 트랜지션을 껐으므로 즉시 이동하지만, 렌더링 안정성을 위해 필요합니다.
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      // 4. 로딩 안 된 이미지 처리
+      const images = document.querySelectorAll('img');
+      const brokenImages = [];
+      images.forEach(img => {
+          if (img.naturalWidth === 0 || img.src === '' || img.style.display === 'none') {
+              const originalDisplay = img.style.display;
+              img.dataset.originalDisplay = originalDisplay;
+              img.style.display = 'none'; 
+              brokenImages.push(img);
+          }
+      });
+
+      // 5. Input 값 텍스트 변환 (Overlay)
+      // 레이아웃이 확정된(딜레이 후) 시점에 좌표를 계산.
       const inputs = document.querySelectorAll('input');
       const overlays = [];
       inputs.forEach(el => {
         const rect = el.getBoundingClientRect();
-        if(rect.width === 0) return;
+        if(rect.width === 0 || el.type === 'hidden' || el.style.display === 'none') return;
+        
         const span = document.createElement('div');
         span.textContent = el.value;
         const style = window.getComputedStyle(el);
         Object.assign(span.style, {
-           position: 'absolute', left: (rect.left+window.scrollX)+'px', top: (rect.top+window.scrollY)+'px', width: rect.width+'px', height: rect.height+'px',
-           zIndex: '99999', background: 'transparent', fontSize: style.fontSize, fontWeight: style.fontWeight, fontFamily: style.fontFamily,
-           textAlign: style.textAlign, padding: style.padding, lineHeight: style.lineHeight, color: style.color, display: 'flex', alignItems: 'center', justifyContent: el.classList.contains('text-center')?'center':'flex-start'
+           position: 'absolute', 
+           // window.scrollX/Y를 더해서 절대 좌표 보정
+           left: (rect.left + window.scrollX)+'px', 
+           top: (rect.top + window.scrollY)+'px', 
+           width: rect.width+'px', 
+           height: rect.height+'px',
+           zIndex: '99999', 
+           background: 'transparent', 
+           fontSize: style.fontSize, 
+           fontWeight: style.fontWeight, 
+           fontFamily: style.fontFamily,
+           textAlign: style.textAlign, 
+           padding: style.padding, 
+           lineHeight: style.lineHeight, 
+           color: style.color, 
+           display: 'flex', 
+           alignItems: 'center', 
+           justifyContent: el.classList.contains('text-center')?'center':'flex-start', 
+           pointerEvents: 'none'
         });
         document.body.appendChild(span);
         overlays.push({el, span});
         el.style.visibility = 'hidden';
       });
 
-      // Add Tiled Watermark
+      // 6. 워터마크 추가
       const tile = document.createElement('div');
       Object.assign(tile.style, { position: 'absolute', left: '0', top: '0', width: document.documentElement.scrollWidth+'px', height: document.documentElement.scrollHeight+'px', pointerEvents: 'none', zIndex: '99998', display: 'flex', flexWrap: 'wrap', overflow: 'hidden' });
       
@@ -3131,74 +3196,78 @@
       }
       document.body.appendChild(tile);
 
+      // 정리 함수
       const cleanup = () => {
-         noPrints.forEach(el => el.style.removeProperty('display'));
+         // UI 복구
+         noPrints.forEach(el => {
+             if(el.dataset.prevDisplay) el.style.display = el.dataset.prevDisplay;
+             else el.style.removeProperty('display');
+         });
          document.body.classList.remove('no-scrollbar');
-         glassEls.forEach(el => el.style.removeProperty('backdrop-filter'));
+         
+         glassEls.forEach(el => {
+             if(el.dataset.prevFilter) el.style.backdropFilter = el.dataset.prevFilter;
+             else el.style.removeProperty('backdrop-filter');
+         });
+
          overlays.forEach(o => { o.el.style.visibility = ''; o.span.remove(); });
+         
+         if(captureHeader) captureHeader.remove();
+         
+         brokenImages.forEach(img => {
+             img.style.display = img.dataset.originalDisplay || '';
+         });
+         
          tile.remove();
+         if(style) style.remove(); // 스타일 오버라이드 제거 (애니메이션 복구)
          btn.innerHTML = originalText;
       };
 
       try {
         const dateStr = new Date().toISOString().slice(0,10).replace(/-/g,'');
         
-        // Filter function: Returns true if node should be included
         const filterNode = (node) => {
            if (node.id === 'btn-export-mobile' || node.id === 'btn-tuto-mobile') return false;
            return !node.classList?.contains('no-print-target');
         };
 
-        // Manual Font Inlining to Avoid CORS issues with Google Fonts
-        const linkTags = Array.from(document.querySelectorAll('link[rel="stylesheet"]'));
-        const googleFontLink = linkTags.find(l => l.href.includes('fonts.googleapis.com'));
-        let styleTag = null;
-        
-        if (googleFontLink) {
-           try {
-             const resp = await fetch(googleFontLink.href);
-             const cssText = await resp.text();
-             styleTag = document.createElement('style');
-             styleTag.innerHTML = cssText;
-             document.head.appendChild(styleTag);
-             googleFontLink.classList.add('ignore-for-capture'); 
-           } catch(e) { console.warn('Font inline failed', e); }
-        }
+        const options = { 
+            backgroundColor: state.theme === 'dark' ? '#0f172a' : '#f8fafc',
+            cacheBust: true,
+            useCORS: true,       
+            skipOnError: true,
+            filter: filterNode,
+            pixelRatio: 2 // 해상도 2배 (선명하게)
+        };
 
-        // Attempt 1: High Quality
-        try {
-            const blob = await htmlToImage.toBlob(document.body, { 
-                pixelRatio: isSamsung ? 1 : 2,
-                backgroundColor: state.theme === 'dark' ? '#0f172a' : '#f8fafc',
-                skipAutoScale: true,
-                cacheBust: true,
-                filter: filterNode
-            });
-            downloadBlob(blob, `iot_shoppinglist_${dateStr}_shoppingthings.png`);
-        } catch(err) {
-            console.warn('High quality capture failed, retrying with lower settings...', err);
-            // Attempt 2: Low Quality Fallback
-            const blob = await htmlToImage.toBlob(document.body, { 
-                pixelRatio: 1,
-                backgroundColor: state.theme === 'dark' ? '#0f172a' : '#f8fafc',
-                skipAutoScale: true,
-                cacheBust: true,
-                filter: filterNode
-            });
-            downloadBlob(blob, `iot_shoppinglist_${dateStr}_optimized_shoppingthings.png`);
-        }
+        // 캡처 전에 스크롤을 맨 위로 올려야 헤더가 잘리지 않을 수 있습니다.
+        // window.scrollTo(0, 0); (사용자 경험상 튈 수 있으나 캡처 정확도는 올라감)
+
+        const blob = await htmlToImage.toBlob(document.body, options);
         
-        if(styleTag) styleTag.remove();
-        if(googleFontLink) googleFontLink.classList.remove('ignore-for-capture');
+        if (!blob) throw new Error('이미지 생성 결과가 비어있습니다.');
+        downloadBlob(blob, `ShoppingThings_List_${dateStr}.png`);
 
       } catch(e) { 
-        console.error(e); 
-        alert('이미지 저장에 실패했습니다. 잠시 후 다시 시도해주세요.'); 
+        console.error("Export Error:", e);
+        let msg = e.message || e;
+        if (e.type === 'error') msg = '이미지 리소스 보안 에러';
+        alert('저장 실패: ' + msg);
       } finally {
         cleanup();
       }
     };
-
+    function downloadBlob(blob, filename) {
+        if (!blob) throw new Error('Blob creation failed');
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(link.href);
+    }
+    
     //PWA
     //PWA Service Worker 등록
     if ('serviceWorker' in navigator) {
