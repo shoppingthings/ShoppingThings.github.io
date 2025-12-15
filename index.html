@@ -3246,7 +3246,7 @@
         const blob = await htmlToImage.toBlob(document.body, options);
         
         if (!blob) throw new Error('이미지 생성 결과가 비어있습니다.');
-        downloadBlob(blob, `ShoppingThings_List_${dateStr}.png`);
+        downloadBlob(blob, `ShoppingThings_IoT_Checklist_${dateStr}.png`);
 
       } catch(e) { 
         console.error("Export Error:", e);
