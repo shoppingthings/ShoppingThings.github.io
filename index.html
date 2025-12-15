@@ -2893,7 +2893,7 @@
           ${DEFAULT_PRESETS.map((p, i) => `
             <div class="p-4 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-800/50 group">
               <div>
-                <div class="font-bold text-slate-800 dark:text-slate-200 mb-1 flex items-center gap-2">${getIcon('Box', 16, 'text-brand')} ${p.name}</div>
+                <div class="font-bold text-slate-800 dark:text-slate-200 mb-1 flex items-center gap-2">${p.name}</div>
                 <div class="text-xs text-slate-500 dark:text-slate-400">${p.device} · ${p.protocol}</div>
               </div>
               <button data-preset-idx="${i}" class="px-4 py-2 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 rounded-full text-sm font-bold hover:bg-brand hover:text-white dark:hover:bg-brand dark:hover:text-white transition-colors">추가</button>
@@ -2991,8 +2991,8 @@
       const el = openPopover(anchor, html);
       el.onclick = (e) => {
         const act = e.target.closest('button')?.dataset.a;
-        if(act === 'clear' && confirm('비우시겠습니까?')) { state.rooms[rIdx].rows = []; saveRooms(); renderAll(); }
-        else if(act === 'remove' && confirm('삭제하시겠습니까?')) { state.rooms.splice(rIdx, 1); saveRooms(); renderAll(); }
+        if(act === 'clear' && confirm('방을 비우시겠습니까?')) { state.rooms[rIdx].rows = []; saveRooms(); renderAll(); }
+        else if(act === 'remove' && confirm('방을 삭제하시겠습니까?')) { state.rooms.splice(rIdx, 1); saveRooms(); renderAll(); }
         else if(act === 'preset') { openPresetModal(rIdx); }
         document.getElementById('popover-root').innerHTML = '';
       };
